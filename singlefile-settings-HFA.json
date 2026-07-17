@@ -17,7 +17,7 @@
         "video": "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5"
       },
       "addProof": false,
-      "allowedBookmarkFolders": [""],
+      "allowedBookmarkFolders": [],
       "applySystemTheme": true,
       "autoClose": false,
       "autoOpenEditor": false,
@@ -45,7 +45,7 @@
       "compressHTML": true,
       "confirmFilename": false,
       "confirmInfobarContent": false,
-      "contentWidth": "70",
+      "contentWidth": 70,
       "contextMenuEnabled": true,
       "createRootDirectory": false,
       "customShortcut": null,
@@ -58,7 +58,7 @@
       "displayStats": false,
       "extractDataFromPage": true,
       "filenameConflictAction": "uniquify",
-      "filenameMaxLength": "192",
+      "filenameMaxLength": 192,
       "filenameMaxLengthUnit": "bytes",
       "filenameReplacedCharacters": [
         "~", "+", "?", "%", "*", ":", "|", "\"", "<", ">", "\\\\", "\u0000-\u001f", "\u007f"
@@ -67,7 +67,7 @@
       "filenameReplacementCharacters": [
         "～", "＋", "？", "％", "＊", "：", "｜", "＂", "＜", "＞", "＼"
       ],
-      "filenameTemplate": "[HFA] {page-title} ({date-iso} {time-iso}).{filename-extension}",
+      "filenameTemplate": "[HFA] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}",
       "forceWebAuthFlow": false,
       "githubBranch": "main",
       "githubRepository": "SingleFile-Archives",
@@ -75,8 +75,8 @@
       "githubUser": "",
       "groupDuplicateImages": true,
       "groupDuplicateStylesheets": false,
-      "ignoredBookmarkFolders": [""],
-      "imageReductionFactor": "1",
+      "ignoredBookmarkFolders": [],
+      "imageReductionFactor": 1,
       "includeBOM": false,
       "includeInfobar": true,
       "infobarPositionAbsolute": false,
@@ -161,7 +161,7 @@
     {
       "autoSaveProfile": "__Disabled_Settings__",
       "profile": "__Default_Settings__",
-      "url": ""
+      "url": "*"
     }
   ],
   "maxParallelWorkers": 12,
