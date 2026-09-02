@@ -1,0 +1,7 @@
+# 本仓库的本地运行状态
+.codewhale/
+
+# 操作系统 / 编辑器噪音
+.DS_Store
+Thumbs.db
+desktop.ini
