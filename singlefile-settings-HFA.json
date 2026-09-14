@@ -121,6 +121,7 @@
       "loadDeferredImagesKeepZoomLevel": false,
       "loadDeferredImagesMaxIdleTime": 10000,
       "logsEnabled": true,
+      "maxAppendedDataLength": 16361,
       "maxResourceSize": 15,
       "maxResourceSizeEnabled": false,
       "maxSizeDuplicateImages": 1048576,
