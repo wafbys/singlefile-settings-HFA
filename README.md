@@ -33,13 +33,13 @@
 
 **把动态加载的内容也抓全**
 
-- 懒加载资源开启（`loadDeferredImages = true`），滚动事件驱动，最多等待 10 秒页面空闲（`loadDeferredImagesMaxIdleTime = 10000` ms）
+- 延迟内容加载开启（`loadDeferredContent = true`），滚动事件驱动，最多等待 10 秒页面空闲（`loadDeferredContentMaxIdleTime = 10000` ms）
 - 网络请求超时放宽到 30 秒（`networkTimeout = 30000` ms）
 
 **存档元信息**
 
 - 保存 favicon（`saveFavicon`）、保留原始 URL（`saveOriginalURLs`）、解析页面内链接（`resolveLinks`）
-- 在保存的页面中插入 SingleFile 注释与 `noindex`、CSP 等 meta（`insertSingleFileComment` / `insertMetaNoIndex` / `insertMetaCSP`）
+- 在保存的页面中插入 SingleFile 注释与 `noindex`、CSP 等 meta（`insertSingleFileComment` / `insertMetaNoIndex` / `insertMetaCSP`），并保留页面 canonical 链接（`insertCanonicalLink = true`）
 
 **命名约定**
 
@@ -49,9 +49,9 @@
 
 ## 维护与同步
 
-本文件是 SingleFile 的**全量导出**格式：多数键（71 个关闭的布尔项、21 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
+本文件是 SingleFile 的**全量导出**格式：多数键（72 个关闭的布尔项、21 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.24.3（配置基线为 1.24.0 的真实导出；1.24.0 → 1.24.3 逐键核对后合入上游唯一新增键，见 [docs/config-audit.md](docs/config-audit.md)）
+- **适用 SingleFile 版本**：1.26.0（配置基线为 1.24.0 的真实导出；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名，见 [docs/config-audit.md](docs/config-audit.md)）
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项。
 - 每个改动配一条说明动机的 git 提交（参见提交历史），便于回溯高保真策略的演进。
