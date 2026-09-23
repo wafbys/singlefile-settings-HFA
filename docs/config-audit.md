@@ -1,15 +1,18 @@
 # HFA 配置审计报告
 
-- 审计日期：2026-09-23（1.26.3 上游核对；此前 2026-09-22 1.26.2 上游核对、2026-09-21 1.26.1 上游核对、2026-09-17 1.26.0 上游核对、2026-09-14 1.24.3 上游核对、2026-09-04 升级复核、2026-09-02 初审）
+- 审计日期：2026-09-23（1.26.4 上游核对 + 全面评审与懒加载保真调优；同日稍早 1.26.3 上游核对，此前 2026-09-22 1.26.2 上游核对、2026-09-21 1.26.1 上游核对、2026-09-17 1.26.0 上游核对、2026-09-14 1.24.3 上游核对、2026-09-04 升级复核、2026-09-02 初审）
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.26.3（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 适用版本：SingleFile 1.26.4（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
 - 审计基准：commit `9fc9c62`（1.26.2 核对后状态，148 键）
-- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名，148 键（1.26.1 / 1.26.2 / 1.26.3 均未改动配置面，键集与取值均无变化）
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.26.3` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.9...v1.6.10` 逐条核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
+- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名，148 键（1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 均未改动配置面，键集与取值均无变化）；2026-09-23 上调懒加载缩放下限与空闲等待（见「三、发现与处置」9）
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.26.4` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.10...v1.6.11` 逐条核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
 - **结构健康**：JSON 语法有效；148 键与上游 `DEFAULT_CONFIG` 键集完全一致；无影响高保真目标的矛盾配置。发现并修复 1 处**保存格式被静默切换**的历史问题（`compressContent` 被误当作「压缩内容」关掉，见下条），无其他强制修改项。
+- **1.26.4 上游核对（2026-09-23）**：上游本版只把内置的 single-file-core 由 1.6.10 升到 1.6.11（扩展自身只改了版本号与 lockfile，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.3` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.4 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.11 只修一处 1.6.10 引入的回归：页面内「链接套链接」的非法嵌套（如 Substack 首页）会保存失败并报 `HierarchyRequestError` —— 此前嵌套修复把待复位元素按逆文档序恢复，可能把元素插回它自己的后代；现改为按正序（祖先在前）恢复。该修复在**所有页面的 DOM 修复路径**上无条件执行，属保真度提升（让这类页面可保存），不涉及任何配置键（见「三、发现与处置」1）。
+- **键语义补全（2026-09-23）**：上一版「语义待确证清单」的 4 个键（`insertEmbeddedImage` / `insertEmbeddedScreenshotImage` / `moveStylesInHead` / `saveFilenameTemplateData`）本轮已逐一到 `v1.26.4` 源码确证，清单清空；4 键在本配置均为 `false`，不影响现有行为（见「五、键语义补充」）。
+- **懒加载保真调优（2026-09-23，改 2 键）**：全面评审确认「动态内容抓全」的两处可提升点并已调整 —— `loadDeferredContentMinZoomFactor`：`0` → `0.5`（给懒加载阶段的页面缩放设下限，避免长页面被极度缩小、漏抓依赖布局的懒加载）；`loadDeferredContentMaxIdleTime`：`10000` → `20000` ms（给迟到内容更长等待）。键集不变，仍为 148 键（见「三、发现与处置」9）。
 - **1.26.3 上游核对（2026-09-23）**：上游本版只把内置的 single-file-core 由 1.6.9 升到 1.6.10（扩展自身只改了版本号与 lockfile，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.2` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.3 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.10 的改动集中在**归档侧**（自解压归档里按内容去重样式表、SingleFile 自生成图片改存文件）与**已关闭的 `removeUnusedStyles` 清理精度**，前者只改变归档内部组织方式、不产生新键，后者挂在 HFA 已关闭的开关之后（见「三、发现与处置」1），`DEFAULT_MAX_APPENDED_DATA_LENGTH` 仍为 16361。
 - **1.26.2 上游核对（2026-09-22）**：上游本版只把内置的 single-file-core 由 1.6.7 升到 1.6.9（扩展自身只改了版本号，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.1` **逐字节相同**（SHA-256 一致），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.2 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.8 / 1.6.9 的三处改动都挂在 HFA 已关闭的开关之后（见「三、发现与处置」1），`DEFAULT_MAX_APPENDED_DATA_LENGTH` 仍为 16361。
 - **1.26.1 上游核对（2026-09-21）**：上游本版只把内置的 single-file-core 由 1.6.5 升到 1.6.7（扩展自身只有俄语翻译与 CI 镜像两处改动）。`src/core/bg/config.js` 在 1.26.0 之后**一字未改**（该文件最后一次提交 `eb69c68` 早于 `v1.26.0` 标签），所以 `DEFAULT_CONFIG`（148 键）、`DEPRECATED_OPTION_NAMES` 改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则都与 1.26.0 相同。本地 148 键与 1.26.1 的 `DEFAULT_CONFIG` 键集**完全一致**（无缺失、无多余），**版本同步本身不要求改动任何键**；需要留意的是 core 1.6.6 / 1.6.7 带来的保存行为变化（见「三、发现与处置」1），以及同批核对查出的、与版本无关的保存格式问题（见下条与「三、发现与处置」2）。
@@ -19,7 +22,7 @@
 - **1.24.0 升级核对（2026-09-04）**：上版 137 键与 1.24.0 真实导出逐键值一致，配置无需功能性调整；唯一差异是 GitHub 5 键随全量导出回潮，已按导出原样纳入。
 - 大量 `false` / 空值均为 SingleFile 全量导出的默认状态，无需处理。
 
-## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进；1.26.1 / 1.26.2 / 1.26.3 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式）
+## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进；1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式，2026-09-23 完成懒加载保真调优）
 
 - profile：仅 `__Default_Settings__`
 - 规则：1 条，`url = "*"` → `__Default_Settings__`；`autoSaveProfile = __Disabled_Settings__`（SingleFile 内置隐藏 profile，不出现在导出中，属正常）
@@ -27,6 +30,7 @@
 - 键类型分布：布尔 98（true 27 / false 71）、字符串 31（空 21 / 非空 10）、数字 13、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 相对 1.24.3 核对状态（commit `783b206`，143 键）：7 个 `loadDeferredImages*` 键退出、12 个键名加入（8 个 `loadDeferredContent*` + 4 个其他），共 148 键；键值丢失 0（见「三、发现与处置」）
 - 2026-09-21 值调整：`compressContent`：`false` → `true`（修正 `35b299b` 的静默格式切换，恢复自解压归档）；`selfExtractingArchive` / `extractDataFromPage`：恢复为 `true`（`df71ed2` 曾误按 HTML 格式改为 `false`）。键集不变，仍为 148 键；详见「三、发现与处置」2
+- 2026-09-23 值调整：`loadDeferredContentMinZoomFactor`：`0` → `0.5`；`loadDeferredContentMaxIdleTime`：`10000` → `20000`。键集不变，仍为 148 键；详见「三、发现与处置」9
 - 键序：与导出格式一致，按码位升序排列（已校验）
 
 ## 二、键分类
@@ -36,7 +40,7 @@
 - 压缩关闭（页面自身）：`compressHTML` / `compressCSS` 均为 `false`，保存页里的 HTML / CSS 保持可读格式。注意 `compressContent` **不属于**这一类：它是保存格式总开关（见「归档 / 保存格式」）
 - 屏蔽关闭：`blockScripts` / `blockStylesheets` / `blockImages` / `blockFonts` / `blockVideos` / `blockAudios` / `blockAlternativeImages` / `blockMixedContent` 等均为 `false`
 - 清理关闭：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` / `removeAlternativeFonts` / `removeAlternativeImages` / `removeAlternativeMedias` / `removeNoScriptTags` / `removeSavedDate` 等均为 `false`
-- 等待与超时：`loadDeferredContent = true`（`loadDeferredContentMaxIdleTime = 10000` ms，`loadDeferredContentDispatchScrollEvent = true`）；`networkTimeout = 30000` ms；`loadDeferredContentMinZoomFactor = 0`（不设缩放下限，与 1.24.0 行为一致）
+- 等待与超时：`loadDeferredContent = true`（`loadDeferredContentMaxIdleTime = 20000` ms，`loadDeferredContentDispatchScrollEvent = true`）；`networkTimeout = 30000` ms；`loadDeferredContentMinZoomFactor = 0.5`（懒加载阶段缩放下限，2026-09-23 由上游默认 `0` 上调，见「三、发现与处置」9）
 - 单资源上限检查关闭：`maxResourceSizeEnabled = false`
 - 存档信息：`saveFavicon` / `saveOriginalURLs` / `resolveLinks` / `replaceBookmarkURL` / `insertSingleFileComment` / `insertMetaNoIndex` / `insertMetaCSP` / `insertCanonicalLink` 均为 `true`（`insertCanonicalLink` 在 1.24.x 中不可配置，由抓取入口 `src/core/content/content.js` 硬编码为 `true`；1.25.0 起提升为一等选项、默认 `true`，1.26.0 起选项页有复选框 —— 本配置行为前后一致）
 
@@ -66,7 +70,7 @@
 
 ## 三、发现与处置
 
-1. **1.26.1 / 1.26.2 / 1.26.3 上游核对：配置面零变化，core 升级未绕过 HFA 已关闭的裁剪开关（2026-09-21 / 2026-09-22 / 2026-09-23，无需改动）**
+1. **1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 上游核对：配置面零变化，core 升级未绕过 HFA 已关闭的裁剪开关（2026-09-21 / 2026-09-22 / 2026-09-23 / 2026-09-23，无需改动）**
    比对方式：本地 148 键 vs 上游 `v1.26.1` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键），脚本键级比对（结果：无缺失、无多余、键序仍为码位升序）；再用各配置相关文件的**最后提交时间**确认本版根本没碰配置面。
    证据链（配置面）：
    - `src/core/bg/config.js` 最后一次提交是 `eb69c68`（2026-09-16 21:35 UTC，"add an option to animate the infobar"），**早于** `v1.26.0` 标签（2026-09-16 23:35 UTC）→ 该文件在 1.26.0 与 1.26.1 中逐字节相同：`DEFAULT_CONFIG`（148 键）、`DEPRECATED_OPTION_NAMES`（7 项改名表）、`upgrade()` 的全部迁移与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则都没有变化，1.26.0 那轮的结论对 1.26.1 直接成立。
@@ -91,10 +95,15 @@
    本版实质内容都在 core 1.6.10，逐条确认可达性后均不影响本配置的键：
    - 归档侧（**会作用于本配置**，但不改键）：自解压归档里「同一内容的样式表只存一份」（按字节而非 URL 去重，`@import` 链自叶向上合并）、「SingleFile 自生成的图片（视频 poster 快照、被屏蔽视频旁的图标、`<canvas>` 位图）改为存文件而非内联 `data:` URI」。这两项只改变**归档内部的条目组织与体积**，不新增配置项、不改变渲染结果；本配置 `compressContent = true` + `selfExtractingArchive = true`，故实际生效。归档内样式表去重的门控只作用于归档路径（与 `groupDuplicateStylesheets` 的**内联**路径门控并列，见「归档 / 保存格式」条）。
    - `removeUnusedStyles` 清理精度修复（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套选择器 `&`、转义 / 大小写标识符、`-webkit-` 前缀值、`:not()` / `:has()` / `:nth-child(of …)` 内的净化选择器、匿名层 `@import`、`@import` 的 `supports()` 条件）：全部实现于 unused-styles 清理路径 → 本配置 `removeUnusedStyles = false`，**该路径根本不执行**（`core/index.js` 的 REPLACE_DATA_STAGE `{ option: "removeUnusedStyles", action: "removeUnusedStyles" }`）。
-   - 一般性修复（与本配置可达，均属保真度提升）：iframe 的 `src` 被替换为 `srcdoc` 时保留空 `src`，避免页面自身的 `iframe:not([src])` 规则把它隐藏；归档解压到本地后不再因 `<link crossorigin>` 触发 `file://` CORS 而丢失样式表（重写为归档内 URL 时去掉该属性）；重存已被 SingleFile 保存过的页面时结构伪类匹配不再漂移。
-   - core 常量复核：`single-file-core` v1.6.10 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）仍为 **16361**，`maxAppendedDataLength` 无需调整。
-   - 结论：1.26.3 对本配置的**键集与键值无影响**，无需为它调整任何键；归档侧两项变化会实际改变产物体积与内部组织，但属上游既定行为。
-   精确性说明：core 侧结论以 v1.6.7（1.26.1）、v1.6.9（1.26.2）与 v1.6.10（1.26.3）标签下的**端状态**源码为据，未与更早版本逐行 diff，故「某项行为是否自某版起才如此」不作断言；`v1.26.1` / `v1.26.2` / `v1.26.3` 标签的 `package.json` 写的是 `"single-file-core": "^1.6.5"`（caret 区间，构建时按 lockfile 解析），「实际打包 1.6.7 / 1.6.9 / 1.6.10」取自各自的 `package-lock.json` 与上游发布说明，而非构建产物核对。
+    - 一般性修复（与本配置可达，均属保真度提升）：iframe 的 `src` 被替换为 `srcdoc` 时保留空 `src`，避免页面自身的 `iframe:not([src])` 规则把它隐藏；归档解压到本地后不再因 `<link crossorigin>` 触发 `file://` CORS 而丢失样式表（重写为归档内 URL 时去掉该属性）；重存已被 SingleFile 保存过的页面时结构伪类匹配不再漂移。
+    - core 常量复核：`single-file-core` v1.6.10 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）仍为 **16361**，`maxAppendedDataLength` 无需调整。
+    - 结论：1.26.3 对本配置的**键集与键值无影响**，无需为它调整任何键；归档侧两项变化会实际改变产物体积与内部组织，但属上游既定行为。
+    1.26.4 复核（2026-09-23）：`v1.26.3...v1.26.4` 在 `src/` 下无任何改动（GitHub compare 只列出 `manifest.json` 的版本号、`package-lock.json` 的 core 版本与构建产物），`src/core/bg/config.js` 与 1.26.3 **逐字节相同**（两版 SHA-256 均为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），故上述配置面结论对 1.26.4 直接成立；本地 148 键与 1.26.4 的 `DEFAULT_CONFIG` 再次脚本比对，仍为无缺失、无多余。
+    本版实质内容只有 core 1.6.11 一处回归修复，确认可达性后不影响本配置的任何键：
+    - 嵌套链接修复（`core/index.js` 的 `getNestingPositions` / `restoreNestingPositions`）：修 1.6.10 引入的回归 —— 页面内「链接套链接」（嵌套 `<a>`）时保存失败报 `HierarchyRequestError`（如 Substack 首页在 Firefox 下）。修复：`getNestingPositions` 增记 `previousSibling`，`restoreNestingPositions` 由逆文档序改为正序恢复（有前兄弟则插入到前兄弟之后、无前兄弟则插到父首子、否则退回按 nextSibling / appendChild），保证祖先先于后代复位。DOM 非法嵌套修复路径**无开关门控**、对所有页面执行（`core/index.js` 的 `REPLACE_DATA_STAGE` 前阶段），不涉及本配置任何键；属保真度提升（让这类页面可保存）。
+    - core 常量复核：1.6.10 → 1.6.11 只动了 `core/index.js`（另含 `package.json` / `package-lock.json` 的版本号与新增回归测试 `test/capture/nesting-repair.js`），`DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）未被触碰，仍为 **16361**，`maxAppendedDataLength` 无需调整。
+    - 结论：1.26.4 对本配置的**键集与键值无影响**，无需为它调整任何键；该修复在 HFA 已启用的保存路径上无条件生效，属保真度收益。
+    精确性说明：core 侧结论以 v1.6.7（1.26.1）、v1.6.9（1.26.2）、v1.6.10（1.26.3）与 v1.6.11（1.26.4）标签下的**端状态**源码为据，未与更早版本逐行 diff，故「某项行为是否自某版起才如此」不作断言；`v1.26.1` / `v1.26.2` / `v1.26.3` / `v1.26.4` 标签的 `package.json` 写的是 `"single-file-core": "^1.6.5"`（caret 区间，构建时按 lockfile 解析），「实际打包 1.6.7 / 1.6.9 / 1.6.10 / 1.6.11」取自各自的 `package-lock.json` 与上游发布说明，而非构建产物核对。
 
 2. **保存格式被静默切成 HTML：已恢复自解压 ZIP (universal)（2026-09-21 发现并修复，改 3 键）**
    现象：1.26.1 的选项页用**一个「格式」下拉**同时驱动三个键 —— `compressContent = fileFormatSelectInput.value.includes("zip")`、`selfExtractingArchive = …includes("self-extracting")`、`extractDataFromPage = value == "self-extracting-zip-universal"`（`src/ui/bg/ui-options.js` 的 `update()`；下拉项见 `src/ui/pages/options.html`，文案见 `_locales/en/messages.json`：HTML / self-extracting ZIP / self-extracting ZIP (universal) / ZIP）。**没有任何控件直接绑定 `compressContent` 或 `selfExtractingArchive`**，所以「`compressContent = false` + `selfExtractingArchive = true` + `extractDataFromPage = true`」这个组合**不可能由 UI 产生**。
@@ -114,7 +123,7 @@
    比对方式：本地 143 键 vs 上游 `v1.26.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）；并以脚本复现扩展 `upgrade()` 的迁移逻辑，验证「旧文件经扩展升级后」与「本文件」在键集与取值上等价。
    改名（7 项，由上游 `DEPRECATED_OPTION_NAMES` 定义）：`loadDeferredImages` / `MaxIdleTime` / `BlockCookies` / `BlockStorage` / `KeepZoomLevel` / `BeforeFrames` → 同名 `loadDeferredContent*`，取值随迁移保留；`loadDeferredImagesDispatchScrollEvent` 映射为 `null`，即**旧键直接删除且不迁移取值**，由新默认 `loadDeferredContentDispatchScrollEvent = true` 接管。本配置旧值即 `true`，与新默认一致，**行为无变化**（这是本次唯一需要人工确认的迁移点）。
    新键（5 个，均按上游默认值合入）：
-   - `loadDeferredContentMinZoomFactor = 0`（1.25.0）：加载延迟内容时的页面缩放下限。源码确证有效区间为 (0, 1]，超出该区间一律按 0 处理，即**不设下限**。
+   - `loadDeferredContentMinZoomFactor`（1.25.0，合入时取上游默认 `0`）：加载延迟内容时的页面缩放下限。源码确证有效区间为 (0, 1]，超出该区间一律按 0 处理，即**不设下限**；本配置已于 2026-09-23 调为 `0.5`（见「三、发现与处置」9）。
    - `insertCanonicalLink = true`（1.25.0）：是否在保存页中写入页面的 canonical 链接。1.24.x 中该行为在抓取入口被硬编码开启、不可配置；提升为选项后默认仍为 `true`，故本配置行为不变。
    - `readMaffMetadata = false`（1.25.0）：源码确证为 core 动作 `readMAFFMetaData` 的开关，开启时会按页面 URL 抓取其所在目录的 `index.rdf`（MAFF 元数据）。默认关闭，保持不额外发起该请求。
    - `animateInfobar = true`（1.26.0）：保存页 infobar 的闪烁 / 扩散圈动画开关；仅影响阅读观感，与存档内容无关。
@@ -137,22 +146,31 @@
 7. **大量默认关闭项**（71 个 `false` 布尔、21 个空字符串）
    判定：SingleFile 全量导出自带状态，非刻意配置，无需处理。
 8. **配置漂移风险（跟踪项）**
-   本文件是全量导出快照：SingleFile 升级会引入新键、改名与迁移标记；文件本身不记录适用版本，长期不更新会落后于扩展能力，直接覆盖导出又会冲掉刻意设置。1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3 各已完成一轮核对；**改名型变更是目前最大的漂移风险**（旧键被静默删除，取值不迁移），故每轮核对都必须同时检查键集与键值。1.26.1 / 1.26.2 / 1.26.3 说明并非每次升级都动配置面：这几版只换了内置 core，配置键集零变化。
+   本文件是全量导出快照：SingleFile 升级会引入新键、改名与迁移标记；文件本身不记录适用版本，长期不更新会落后于扩展能力，直接覆盖导出又会冲掉刻意设置。1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3、1.26.4 各已完成一轮核对；**改名型变更是目前最大的漂移风险**（旧键被静默删除，取值不迁移），故每轮核对都必须同时检查键集与键值。1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 说明并非每次升级都动配置面：这几版只换了内置 core，配置键集零变化。
    **新增风险（2026-09-21）**：键集 / 键值全对，不等于行为对。`compressContent` 这类「路径总开关」被误改后，键集仍与上游完全一致、四轮核对都没报警，但保存格式已经从自解压归档变成纯 HTML（见第 2 条）。故每轮核对还需对少数关键键（`compressContent`、`removeUnused*`、`loadDeferredContent*`、`maxResourceSizeEnabled`、`selfExtractingArchive` 等）确认「在 core 的门之后是否仍可达」，并留意 README 里把它当作别的东西描述的痕迹。后续升级时重复本流程。
+9. **高保真调优：懒加载缩放下限与空闲等待上调（2026-09-23，改 2 键）**
+   动机：全面评审时确认这两处会实际影响「动态内容抓全」的保真度。
+   - `loadDeferredContentMinZoomFactor`：`0` → `0.5`。源码依据：懒加载开始时按 `zoomFactor = Math.max(Math.min(verticalZoomFactor, horizontalZoomFactor), minZoomFactor || 0)` 缩放页面（`core/processors/hooks/content/content-hooks-frames-web.js:296-298`），`0` 表示不设下限，长页面会被缩到极小（如 0.05），使依赖布局 / IntersectionObserver 的懒加载不再触发；设 `0.5` 给缩放兜底，`0.5` 落在有效区间 (0, 1] 内。
+   - `loadDeferredContentMaxIdleTime`：`10000` → `20000` ms。给迟到的动态内容更多等待时间（页面空闲的最长等待窗口）。
+   - 未改项：`includeInfobar`（保留保存页 infobar）、`insertMetaCSP`（保留自包含 CSP）、`networkTimeout = 30000`（按原值保留）。
+   - 键集不变，仍为 148 键，与上游 `DEFAULT_CONFIG` 完全一致。
 
 ## 四、跟进建议
 
-1. 在 README 记录适用的 SingleFile 版本号（2026-09-23 已更新为：SingleFile 1.26.3）。
+1. 在 README 记录适用的 SingleFile 版本号（2026-09-23 已更新为：SingleFile 1.26.4）。
 2. 在 README 固化「刻意设置的键」清单，与导出默认值区分（已并入「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项（1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3 各已执行一轮，见「三、发现与处置」）。**改名型变更需额外注意**：取值迁移与否由扩展的迁移表决定，映射为 `null` 的键会被静默删除并回落到新默认。
-4. 建议将**扩展本体**升级至 1.26.3（2026-09-22 发布；本文件已按 1.26.3 核对）。1.26.3 相对 1.26.2 只把内置 core 由 1.6.9 升到 1.6.10（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：归档里同一内容的样式表只存一份（`@import` 链自叶向上合并）、SingleFile 自生成的图片（视频 poster、屏蔽视频图标、`<canvas>` 位图）改存文件而非内联 `data:` URI —— 两者都改变产物组织与体积、不影响渲染，本配置走归档路径会实际生效；unused-styles 清理修得更准（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套 `&`、转义标识符、`-webkit-` 前缀值、`@import` 的层与 `supports()` 等，均被本配置 `removeUnusedStyles = false` 关掉）；归档解压到本地后不再丢失带 `crossorigin` 的 `<link>` 样式表。1.26.2 相对 1.26.1 只把内置 core 由 1.6.7 升到 1.6.9（扩展自身只有版本号），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：`removeUnusedStyles` 清理被修得更准 —— `@scope` 内以组合符开头的相对选择器不再被误删、浏览器解析不了的选择器整条不再参与级联（两者都被本配置的 `removeUnusedStyles = false` 关掉，见「三、发现与处置」1），剥离脚本时会一并移除 SVG 动画元素的 `onbegin` / `onend` / `onrepeat`（本配置 `blockScripts = false`，不触发），以及 infobar 涟漪动画不再重复播放。1.26.1 相对 1.26.0 只换了内置 core（1.6.5 → 1.6.7）与俄语翻译；core 侧值得知道的变化：字体面裁剪与空规则移除被修正得更彻底（两者都被本配置的 `removeUnusedFonts` / `removeUnusedStyles = false` 关掉，见「三、发现与处置」1）、归档写入顺序确定化（同一页面两次保存产出相同归档，便于按哈希判断页面是否变化）、自解压页在发现多于一个归档候选时拒绝解压。1.26.0 相对 1.24.0 的保真度变化（保存页不再能提交表单或设置 base URI，`javascript:` URI 在所有属性与命名空间中被净化；资源字节优先于声明的 content type；响应头完整转发且按大小写不敏感查找；页面文档不再受单资源大小上限约束）依旧包含在内；1.24.1–1.24.3 的修复（复合 `@font-face` 规则全部保留、iframe 内 SVG 文档内容保留、sandboxed `srcdoc` iframe 按渲染结果保存、`srcset` 保存失败时不留空属性对、BMP / GIF87a 扩展名识别修正）同理。zip.js 升至 2.15.0 后产出的归档与 1.24.0 逐字节不同 —— 本配置走自解压归档路径，这些归档侧变化都会实际生效。
-5. `loadDeferredContentMinZoomFactor` 是 1.25.0 新增、且**选项页暂无控件**的可调项：它为「加载延迟内容时的页面缩放」设下限（有效区间 (0, 1]，`0` = 不设下限）。若要避免长页面在抓取时被极度缩小、导致依赖布局的懒加载失效，可考虑设为 `0.5` 一类值；当前按上游默认 `0` 保留。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项（1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3、1.26.4 各已执行一轮，见「三、发现与处置」）。**改名型变更需额外注意**：取值迁移与否由扩展的迁移表决定，映射为 `null` 的键会被静默删除并回落到新默认。
+4. 建议将**扩展本体**升级至 1.26.4（2026-09-23 发布；本文件已按 1.26.4 核对）。1.26.4 相对 1.26.3 只把内置 core 由 1.6.10 升到 1.6.11（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：修复「链接套链接」的非法嵌套页面（如 Substack 首页）保存失败报 `HierarchyRequestError` 的回归 —— 嵌套复位由逆文档序改为正序（祖先在前）。该修复在 DOM 修复路径无条件生效，属于保真度收益。1.26.3 相对 1.26.2 只把内置 core 由 1.6.9 升到 1.6.10（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：归档里同一内容的样式表只存一份（`@import` 链自叶向上合并）、SingleFile 自生成的图片（视频 poster、屏蔽视频图标、`<canvas>` 位图）改存文件而非内联 `data:` URI —— 两者都改变产物组织与体积、不影响渲染，本配置走归档路径会实际生效；unused-styles 清理修得更准（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套 `&`、转义标识符、`-webkit-` 前缀值、`@import` 的层与 `supports()` 等，均被本配置 `removeUnusedStyles = false` 关掉）；归档解压到本地后不再丢失带 `crossorigin` 的 `<link>` 样式表。1.26.2 相对 1.26.1 只把内置 core 由 1.6.7 升到 1.6.9（扩展自身只有版本号），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：`removeUnusedStyles` 清理被修得更准 —— `@scope` 内以组合符开头的相对选择器不再被误删、浏览器解析不了的选择器整条不再参与级联（两者都被本配置的 `removeUnusedStyles = false` 关掉，见「三、发现与处置」1），剥离脚本时会一并移除 SVG 动画元素的 `onbegin` / `onend` / `onrepeat`（本配置 `blockScripts = false`，不触发），以及 infobar 涟漪动画不再重复播放。1.26.1 相对 1.26.0 只换了内置 core（1.6.5 → 1.6.7）与俄语翻译；core 侧值得知道的变化：字体面裁剪与空规则移除被修正得更彻底（两者都被本配置的 `removeUnusedFonts` / `removeUnusedStyles = false` 关掉，见「三、发现与处置」1）、归档写入顺序确定化（同一页面两次保存产出相同归档，便于按哈希判断页面是否变化）、自解压页在发现多于一个归档候选时拒绝解压。1.26.0 相对 1.24.0 的保真度变化（保存页不再能提交表单或设置 base URI，`javascript:` URI 在所有属性与命名空间中被净化；资源字节优先于声明的 content type；响应头完整转发且按大小写不敏感查找；页面文档不再受单资源大小上限约束）依旧包含在内；1.24.1–1.24.3 的修复（复合 `@font-face` 规则全部保留、iframe 内 SVG 文档内容保留、sandboxed `srcdoc` iframe 按渲染结果保存、`srcset` 保存失败时不留空属性对、BMP / GIF87a 扩展名识别修正）同理。zip.js 升至 2.15.0 后产出的归档与 1.24.0 逐字节不同 —— 本配置走自解压归档路径，这些归档侧变化都会实际生效。
+5. `loadDeferredContentMinZoomFactor`（1.25.0 新增，选项页暂无控件）：为「加载延迟内容时的页面缩放」设下限（有效区间 (0, 1]）。为避免长页面在抓取时被极度缩小、导致依赖布局的懒加载失效，已于 2026-09-23 设为 `0.5`（见「三、发现与处置」9）。
 6. **保存格式 = 自解压 ZIP (universal)**（2026-09-21 恢复）：`compressContent = true` + `selfExtractingArchive = true` + `extractDataFromPage = true`。`compressContent` 是**格式总开关**，修改它等于换格式：`false` = 纯自包含 HTML（资源内联为 `data:` URI）。要临时换格式，直接用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键；手工只改 `selfExtractingArchive` 不会生效（2026-09-02 的教训，见「三、发现与处置」2）。
 
-## 五、语义待确证清单
+## 五、键语义补充（2026-09-23：待确证清单已清空）
 
-以下键未逐一到上游源码 / 选项页确证语义，建议以 SingleFile 选项页对应控件说明为准；若与高保真目标冲突再行调整（已由上游源码确证的不在此列：`maxAppendedDataLength`、`loadDeferredContentMinZoomFactor`、`readMaffMetadata`，以及 `compressContent` / `selfExtractingArchive` / `extractDataFromPage` / `preventAppendedData` / `disableCompression`（保存格式与归档路径语义）、`groupDuplicateImages` + `maxSizeDuplicateImages`（内联路径的去重门控与体积上限））：
+上一版挂起的 4 个键本轮已逐一到 `v1.26.4` 源码确证语义，清单清空。这 4 键在本配置**均为 `false`**，均未启用，不影响现有行为：
 
-- `insertEmbeddedImage` / `insertEmbeddedScreenshotImage`
-- `saveFilenameTemplateData`
-- `moveStylesInHead`
+- `insertEmbeddedImage = false`：开启且 `compressContent = true` 时，保存前弹出文件选择框，把用户选定的图片作为「嵌入图片」写进保存页（`src/core/content/content.js:319`）。仅归档路径可用。
+- `insertEmbeddedScreenshotImage = false`：开启且 `compressContent = true` 时，在资源初始化前抓取整页截图并作为「嵌入图片」写进保存页（`src/core/content/content.js:267`）。选项页中勾选 `insertEmbeddedImage` 会联动勾上它；两者在 `compressContent = false` 时均禁用。
+- `moveStylesInHead = false`：开启时把 `<head>` 之外的 `<style>`（`body style` / `body ~ style`，且计算样式判为隐藏者）在抓取阶段标记（`core/helper.js:293`），收尾阶段移入 `<head>`（`core/index.js:1050`）；关闭时保持样式元素原位置。仅调整保存页内部结构，与资源保留无关。
+- `saveFilenameTemplateData = false`：开启时把一个含 `saveUrl` / `saveDate` / 文件名模板等字段的 JSON `<script data-single-file-options>` 写进保存页，供再次保存 / 编辑器复用（`core/index.js:698`）；若 `openEditor = true` 或文件名模板含 `{digest-sha-N}`，会被强制置为 `true`（`core/index.js:188`）。本配置 `openEditor = false` 且模板不含 digest，故保持 `false`，该 JSON 不会写入。
+
+已由上游源码确证、不在此列的键：`maxAppendedDataLength`、`loadDeferredContentMinZoomFactor`、`readMaffMetadata`，以及 `compressContent` / `selfExtractingArchive` / `extractDataFromPage` / `preventAppendedData` / `disableCompression`（保存格式与归档路径语义）、`groupDuplicateImages` + `maxSizeDuplicateImages`（内联路径的去重门控与体积上限）。后续新增键再按同一流程补录。
