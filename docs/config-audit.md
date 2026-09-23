@@ -1,15 +1,16 @@
 # HFA 配置审计报告
 
-- 审计日期：2026-09-22（1.26.2 上游核对；此前 2026-09-21 1.26.1 上游核对、2026-09-17 1.26.0 上游核对、2026-09-14 1.24.3 上游核对、2026-09-04 升级复核、2026-09-02 初审）
+- 审计日期：2026-09-23（1.26.3 上游核对；此前 2026-09-22 1.26.2 上游核对、2026-09-21 1.26.1 上游核对、2026-09-17 1.26.0 上游核对、2026-09-14 1.24.3 上游核对、2026-09-04 升级复核、2026-09-02 初审）
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.26.2（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
-- 审计基准：commit `6b916a0`（1.26.1 核对后状态，148 键）
-- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名，148 键（1.26.1 / 1.26.2 均未改动配置面，键集与取值均无变化）
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.26.2` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.7...v1.6.9` 逐文件核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
+- 适用版本：SingleFile 1.26.3（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 审计基准：commit `9fc9c62`（1.26.2 核对后状态，148 键）
+- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名，148 键（1.26.1 / 1.26.2 / 1.26.3 均未改动配置面，键集与取值均无变化）
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.26.3` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.9...v1.6.10` 逐条核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
 - **结构健康**：JSON 语法有效；148 键与上游 `DEFAULT_CONFIG` 键集完全一致；无影响高保真目标的矛盾配置。发现并修复 1 处**保存格式被静默切换**的历史问题（`compressContent` 被误当作「压缩内容」关掉，见下条），无其他强制修改项。
+- **1.26.3 上游核对（2026-09-23）**：上游本版只把内置的 single-file-core 由 1.6.9 升到 1.6.10（扩展自身只改了版本号与 lockfile，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.2` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.3 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.10 的改动集中在**归档侧**（自解压归档里按内容去重样式表、SingleFile 自生成图片改存文件）与**已关闭的 `removeUnusedStyles` 清理精度**，前者只改变归档内部组织方式、不产生新键，后者挂在 HFA 已关闭的开关之后（见「三、发现与处置」1），`DEFAULT_MAX_APPENDED_DATA_LENGTH` 仍为 16361。
 - **1.26.2 上游核对（2026-09-22）**：上游本版只把内置的 single-file-core 由 1.6.7 升到 1.6.9（扩展自身只改了版本号，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.1` **逐字节相同**（SHA-256 一致），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.2 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.8 / 1.6.9 的三处改动都挂在 HFA 已关闭的开关之后（见「三、发现与处置」1），`DEFAULT_MAX_APPENDED_DATA_LENGTH` 仍为 16361。
 - **1.26.1 上游核对（2026-09-21）**：上游本版只把内置的 single-file-core 由 1.6.5 升到 1.6.7（扩展自身只有俄语翻译与 CI 镜像两处改动）。`src/core/bg/config.js` 在 1.26.0 之后**一字未改**（该文件最后一次提交 `eb69c68` 早于 `v1.26.0` 标签），所以 `DEFAULT_CONFIG`（148 键）、`DEPRECATED_OPTION_NAMES` 改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则都与 1.26.0 相同。本地 148 键与 1.26.1 的 `DEFAULT_CONFIG` 键集**完全一致**（无缺失、无多余），**版本同步本身不要求改动任何键**；需要留意的是 core 1.6.6 / 1.6.7 带来的保存行为变化（见「三、发现与处置」1），以及同批核对查出的、与版本无关的保存格式问题（见下条与「三、发现与处置」2）。
 - **保存格式曾被静默切换，已恢复（2026-09-21）**：`compressContent` 在 1.26.x 不是「是否压缩内容」，而是**保存格式总开关**（选项页的「格式」下拉同时驱动 `compressContent` / `selfExtractingArchive` / `extractDataFromPage`）。`35b299b`（2026-09-02）把它当作「压缩内容」连同 `compressHTML` / `compressCSS` 一起关掉，格式因此从「自解压 ZIP (universal)」静默变成「纯 HTML」，`selfExtractingArchive` / `extractDataFromPage` / `preventAppendedData` / `maxAppendedDataLength` / `disableCompression` 全部失效（而此后 `783b206` 等提交仍在按「归档生效」推断 `maxAppendedDataLength`）。2026-09-21 核对 1.26.1 时查明成因，已恢复 `compressContent = true`、`selfExtractingArchive = true`、`extractDataFromPage = true`（回到 `d47c1ee` 的可用状态）；键集不变，仍为 148 键。详见「三、发现与处置」2。
@@ -18,7 +19,7 @@
 - **1.24.0 升级核对（2026-09-04）**：上版 137 键与 1.24.0 真实导出逐键值一致，配置无需功能性调整；唯一差异是 GitHub 5 键随全量导出回潮，已按导出原样纳入。
 - 大量 `false` / 空值均为 SingleFile 全量导出的默认状态，无需处理。
 
-## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进；1.26.1 / 1.26.2 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式）
+## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进；1.26.1 / 1.26.2 / 1.26.3 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式）
 
 - profile：仅 `__Default_Settings__`
 - 规则：1 条，`url = "*"` → `__Default_Settings__`；`autoSaveProfile = __Disabled_Settings__`（SingleFile 内置隐藏 profile，不出现在导出中，属正常）
@@ -65,7 +66,7 @@
 
 ## 三、发现与处置
 
-1. **1.26.1 / 1.26.2 上游核对：配置面零变化，core 升级未绕过 HFA 已关闭的裁剪开关（2026-09-21 / 2026-09-22，无需改动）**
+1. **1.26.1 / 1.26.2 / 1.26.3 上游核对：配置面零变化，core 升级未绕过 HFA 已关闭的裁剪开关（2026-09-21 / 2026-09-22 / 2026-09-23，无需改动）**
    比对方式：本地 148 键 vs 上游 `v1.26.1` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键），脚本键级比对（结果：无缺失、无多余、键序仍为码位升序）；再用各配置相关文件的**最后提交时间**确认本版根本没碰配置面。
    证据链（配置面）：
    - `src/core/bg/config.js` 最后一次提交是 `eb69c68`（2026-09-16 21:35 UTC，"add an option to animate the infobar"），**早于** `v1.26.0` 标签（2026-09-16 23:35 UTC）→ 该文件在 1.26.0 与 1.26.1 中逐字节相同：`DEFAULT_CONFIG`（148 键）、`DEPRECATED_OPTION_NAMES`（7 项改名表）、`upgrade()` 的全部迁移与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则都没有变化，1.26.0 那轮的结论对 1.26.1 直接成立。
@@ -86,7 +87,14 @@
    - `core/infobar.js` 的 `::after` 涟漪动画改为两种状态都常驻并加过渡延迟：纯观感，仅受 `animateInfobar`（本配置 `true`）影响，与存档内容无关。
    - core 常量复核：`single-file-core` v1.6.9 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）仍为 **16361**，`maxAppendedDataLength` 无需调整。
    - 结论：1.26.2 对本配置的**存档内容无影响**，无需为它调整任何键。
-   精确性说明：core 侧结论以 v1.6.7（1.26.1）与 v1.6.9（1.26.2）标签下的**端状态**源码为据，未与更早版本逐行 diff，故「某项行为是否自某版起才如此」不作断言；`v1.26.1` / `v1.26.2` 标签的 `package.json` 写的是 `"single-file-core": "^1.6.5"`（caret 区间，构建时按 lockfile 解析），「实际打包 1.6.7 / 1.6.9」取自各自的 `package-lock.json` 与上游发布说明，而非构建产物核对。
+   1.26.3 复核（2026-09-23）：`v1.26.2...v1.26.3` 在 `src/` 下无任何改动（GitHub compare 只列出 `manifest.json` 的版本号、`package-lock.json` 的 core 版本，以及两个已构建产物 `lib/single-file.js` / `lib/single-file-extension-editor-helper.js`），`src/core/bg/config.js` 与 1.26.2 **逐字节相同**（两版 SHA-256 均为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），故上述配置面结论对 1.26.3 直接成立；本地 148 键与 1.26.3 的 `DEFAULT_CONFIG` 再次脚本比对，仍为无缺失、无多余。
+   本版实质内容都在 core 1.6.10，逐条确认可达性后均不影响本配置的键：
+   - 归档侧（**会作用于本配置**，但不改键）：自解压归档里「同一内容的样式表只存一份」（按字节而非 URL 去重，`@import` 链自叶向上合并）、「SingleFile 自生成的图片（视频 poster 快照、被屏蔽视频旁的图标、`<canvas>` 位图）改为存文件而非内联 `data:` URI」。这两项只改变**归档内部的条目组织与体积**，不新增配置项、不改变渲染结果；本配置 `compressContent = true` + `selfExtractingArchive = true`，故实际生效。归档内样式表去重的门控只作用于归档路径（与 `groupDuplicateStylesheets` 的**内联**路径门控并列，见「归档 / 保存格式」条）。
+   - `removeUnusedStyles` 清理精度修复（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套选择器 `&`、转义 / 大小写标识符、`-webkit-` 前缀值、`:not()` / `:has()` / `:nth-child(of …)` 内的净化选择器、匿名层 `@import`、`@import` 的 `supports()` 条件）：全部实现于 unused-styles 清理路径 → 本配置 `removeUnusedStyles = false`，**该路径根本不执行**（`core/index.js` 的 REPLACE_DATA_STAGE `{ option: "removeUnusedStyles", action: "removeUnusedStyles" }`）。
+   - 一般性修复（与本配置可达，均属保真度提升）：iframe 的 `src` 被替换为 `srcdoc` 时保留空 `src`，避免页面自身的 `iframe:not([src])` 规则把它隐藏；归档解压到本地后不再因 `<link crossorigin>` 触发 `file://` CORS 而丢失样式表（重写为归档内 URL 时去掉该属性）；重存已被 SingleFile 保存过的页面时结构伪类匹配不再漂移。
+   - core 常量复核：`single-file-core` v1.6.10 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）仍为 **16361**，`maxAppendedDataLength` 无需调整。
+   - 结论：1.26.3 对本配置的**键集与键值无影响**，无需为它调整任何键；归档侧两项变化会实际改变产物体积与内部组织，但属上游既定行为。
+   精确性说明：core 侧结论以 v1.6.7（1.26.1）、v1.6.9（1.26.2）与 v1.6.10（1.26.3）标签下的**端状态**源码为据，未与更早版本逐行 diff，故「某项行为是否自某版起才如此」不作断言；`v1.26.1` / `v1.26.2` / `v1.26.3` 标签的 `package.json` 写的是 `"single-file-core": "^1.6.5"`（caret 区间，构建时按 lockfile 解析），「实际打包 1.6.7 / 1.6.9 / 1.6.10」取自各自的 `package-lock.json` 与上游发布说明，而非构建产物核对。
 
 2. **保存格式被静默切成 HTML：已恢复自解压 ZIP (universal)（2026-09-21 发现并修复，改 3 键）**
    现象：1.26.1 的选项页用**一个「格式」下拉**同时驱动三个键 —— `compressContent = fileFormatSelectInput.value.includes("zip")`、`selfExtractingArchive = …includes("self-extracting")`、`extractDataFromPage = value == "self-extracting-zip-universal"`（`src/ui/bg/ui-options.js` 的 `update()`；下拉项见 `src/ui/pages/options.html`，文案见 `_locales/en/messages.json`：HTML / self-extracting ZIP / self-extracting ZIP (universal) / ZIP）。**没有任何控件直接绑定 `compressContent` 或 `selfExtractingArchive`**，所以「`compressContent = false` + `selfExtractingArchive = true` + `extractDataFromPage = true`」这个组合**不可能由 UI 产生**。
@@ -129,15 +137,15 @@
 7. **大量默认关闭项**（71 个 `false` 布尔、21 个空字符串）
    判定：SingleFile 全量导出自带状态，非刻意配置，无需处理。
 8. **配置漂移风险（跟踪项）**
-   本文件是全量导出快照：SingleFile 升级会引入新键、改名与迁移标记；文件本身不记录适用版本，长期不更新会落后于扩展能力，直接覆盖导出又会冲掉刻意设置。1.24.0、1.24.3、1.26.0、1.26.1 各已完成一轮核对；**改名型变更是目前最大的漂移风险**（旧键被静默删除，取值不迁移），故每轮核对都必须同时检查键集与键值。1.26.1 说明并非每次升级都动配置面：该版只换了 core，配置键集零变化。
+   本文件是全量导出快照：SingleFile 升级会引入新键、改名与迁移标记；文件本身不记录适用版本，长期不更新会落后于扩展能力，直接覆盖导出又会冲掉刻意设置。1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3 各已完成一轮核对；**改名型变更是目前最大的漂移风险**（旧键被静默删除，取值不迁移），故每轮核对都必须同时检查键集与键值。1.26.1 / 1.26.2 / 1.26.3 说明并非每次升级都动配置面：这几版只换了内置 core，配置键集零变化。
    **新增风险（2026-09-21）**：键集 / 键值全对，不等于行为对。`compressContent` 这类「路径总开关」被误改后，键集仍与上游完全一致、四轮核对都没报警，但保存格式已经从自解压归档变成纯 HTML（见第 2 条）。故每轮核对还需对少数关键键（`compressContent`、`removeUnused*`、`loadDeferredContent*`、`maxResourceSizeEnabled`、`selfExtractingArchive` 等）确认「在 core 的门之后是否仍可达」，并留意 README 里把它当作别的东西描述的痕迹。后续升级时重复本流程。
 
 ## 四、跟进建议
 
-1. 在 README 记录适用的 SingleFile 版本号（2026-09-22 已更新为：SingleFile 1.26.2）。
+1. 在 README 记录适用的 SingleFile 版本号（2026-09-23 已更新为：SingleFile 1.26.3）。
 2. 在 README 固化「刻意设置的键」清单，与导出默认值区分（已并入「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项（1.24.0、1.24.3、1.26.0、1.26.1、1.26.2 各已执行一轮，见「三、发现与处置」）。**改名型变更需额外注意**：取值迁移与否由扩展的迁移表决定，映射为 `null` 的键会被静默删除并回落到新默认。
-4. 建议将**扩展本体**升级至 1.26.2（2026-09-21 发布；本文件已按 1.26.2 核对）。1.26.2 相对 1.26.1 只把内置 core 由 1.6.7 升到 1.6.9（扩展自身只有版本号），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：`removeUnusedStyles` 清理被修得更准 —— `@scope` 内以组合符开头的相对选择器不再被误删、浏览器解析不了的选择器整条不再参与级联（两者都被本配置的 `removeUnusedStyles = false` 关掉，见「三、发现与处置」1），剥离脚本时会一并移除 SVG 动画元素的 `onbegin` / `onend` / `onrepeat`（本配置 `blockScripts = false`，不触发），以及 infobar 涟漪动画不再重复播放。1.26.1 相对 1.26.0 只换了内置 core（1.6.5 → 1.6.7）与俄语翻译；core 侧值得知道的变化：字体面裁剪与空规则移除被修正得更彻底（两者都被本配置的 `removeUnusedFonts` / `removeUnusedStyles = false` 关掉，见「三、发现与处置」1）、归档写入顺序确定化（同一页面两次保存产出相同归档，便于按哈希判断页面是否变化）、自解压页在发现多于一个归档候选时拒绝解压。1.26.0 相对 1.24.0 的保真度变化（保存页不再能提交表单或设置 base URI，`javascript:` URI 在所有属性与命名空间中被净化；资源字节优先于声明的 content type；响应头完整转发且按大小写不敏感查找；页面文档不再受单资源大小上限约束）依旧包含在内；1.24.1–1.24.3 的修复（复合 `@font-face` 规则全部保留、iframe 内 SVG 文档内容保留、sandboxed `srcdoc` iframe 按渲染结果保存、`srcset` 保存失败时不留空属性对、BMP / GIF87a 扩展名识别修正）同理。zip.js 升至 2.15.0 后产出的归档与 1.24.0 逐字节不同 —— 本配置走自解压归档路径，这些归档侧变化都会实际生效。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项（1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3 各已执行一轮，见「三、发现与处置」）。**改名型变更需额外注意**：取值迁移与否由扩展的迁移表决定，映射为 `null` 的键会被静默删除并回落到新默认。
+4. 建议将**扩展本体**升级至 1.26.3（2026-09-22 发布；本文件已按 1.26.3 核对）。1.26.3 相对 1.26.2 只把内置 core 由 1.6.9 升到 1.6.10（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：归档里同一内容的样式表只存一份（`@import` 链自叶向上合并）、SingleFile 自生成的图片（视频 poster、屏蔽视频图标、`<canvas>` 位图）改存文件而非内联 `data:` URI —— 两者都改变产物组织与体积、不影响渲染，本配置走归档路径会实际生效；unused-styles 清理修得更准（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套 `&`、转义标识符、`-webkit-` 前缀值、`@import` 的层与 `supports()` 等，均被本配置 `removeUnusedStyles = false` 关掉）；归档解压到本地后不再丢失带 `crossorigin` 的 `<link>` 样式表。1.26.2 相对 1.26.1 只把内置 core 由 1.6.7 升到 1.6.9（扩展自身只有版本号），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：`removeUnusedStyles` 清理被修得更准 —— `@scope` 内以组合符开头的相对选择器不再被误删、浏览器解析不了的选择器整条不再参与级联（两者都被本配置的 `removeUnusedStyles = false` 关掉，见「三、发现与处置」1），剥离脚本时会一并移除 SVG 动画元素的 `onbegin` / `onend` / `onrepeat`（本配置 `blockScripts = false`，不触发），以及 infobar 涟漪动画不再重复播放。1.26.1 相对 1.26.0 只换了内置 core（1.6.5 → 1.6.7）与俄语翻译；core 侧值得知道的变化：字体面裁剪与空规则移除被修正得更彻底（两者都被本配置的 `removeUnusedFonts` / `removeUnusedStyles = false` 关掉，见「三、发现与处置」1）、归档写入顺序确定化（同一页面两次保存产出相同归档，便于按哈希判断页面是否变化）、自解压页在发现多于一个归档候选时拒绝解压。1.26.0 相对 1.24.0 的保真度变化（保存页不再能提交表单或设置 base URI，`javascript:` URI 在所有属性与命名空间中被净化；资源字节优先于声明的 content type；响应头完整转发且按大小写不敏感查找；页面文档不再受单资源大小上限约束）依旧包含在内；1.24.1–1.24.3 的修复（复合 `@font-face` 规则全部保留、iframe 内 SVG 文档内容保留、sandboxed `srcdoc` iframe 按渲染结果保存、`srcset` 保存失败时不留空属性对、BMP / GIF87a 扩展名识别修正）同理。zip.js 升至 2.15.0 后产出的归档与 1.24.0 逐字节不同 —— 本配置走自解压归档路径，这些归档侧变化都会实际生效。
 5. `loadDeferredContentMinZoomFactor` 是 1.25.0 新增、且**选项页暂无控件**的可调项：它为「加载延迟内容时的页面缩放」设下限（有效区间 (0, 1]，`0` = 不设下限）。若要避免长页面在抓取时被极度缩小、导致依赖布局的懒加载失效，可考虑设为 `0.5` 一类值；当前按上游默认 `0` 保留。
 6. **保存格式 = 自解压 ZIP (universal)**（2026-09-21 恢复）：`compressContent = true` + `selfExtractingArchive = true` + `extractDataFromPage = true`。`compressContent` 是**格式总开关**，修改它等于换格式：`false` = 纯自包含 HTML（资源内联为 `data:` URI）。要临时换格式，直接用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键；手工只改 `selfExtractingArchive` 不会生效（2026-09-02 的教训，见「三、发现与处置」2）。
 

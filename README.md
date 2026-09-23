@@ -61,7 +61,7 @@
 
 本文件是 SingleFile 的**全量导出**格式：多数键（71 个关闭的布尔项、21 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.26.2（配置基线为 1.24.0 的真实导出；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名；1.26.1 只更新了内置 single-file-core 1.6.5 → 1.6.7，`DEFAULT_CONFIG` 与迁移逻辑未动；1.26.2 只把 core 由 1.6.7 升到 1.6.9，`src/core/bg/config.js` 与 1.26.1 逐字节相同，配置面零变化，且 core 的三处改动（未使用样式清理、屏蔽脚本时的 SVG 事件处理器剥离、infobar 动画）都挂在 HFA 已关闭的开关之后。版本同步本身都不需要改键。同轮另行发现并修复了 2026-09-02 起保存格式被静默切成 HTML 的问题，见 [docs/config-audit.md](docs/config-audit.md)）
+- **适用 SingleFile 版本**：1.26.3（配置基线为 1.24.0 的真实导出；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名；1.26.1 只更新了内置 single-file-core 1.6.5 → 1.6.7，`DEFAULT_CONFIG` 与迁移逻辑未动；1.26.2 只把 core 由 1.6.7 升到 1.6.9，`src/core/bg/config.js` 与 1.26.1 逐字节相同；1.26.3 只把 core 由 1.6.9 升到 1.6.10，`src/core/bg/config.js` 与 1.26.2 仍逐字节相同（SHA-256 同为 `D45E9547…`），148 键与上游 `DEFAULT_CONFIG` 完全一致，配置面零变化。1.26.2 的 core 三处改动（未使用样式清理、屏蔽脚本时的 SVG 事件处理器剥离、infobar 动画）挂在 HFA 已关闭的开关之后；1.26.3 的 core 改动集中在归档侧（按内容去重样式表、自生成图片改存文件）与已关闭的 `removeUnusedStyles` 清理精度，前者只改变归档内部组织方式、不产生新键，后者不可达。版本同步本身都不需要改键。同轮另行发现并修复了 2026-09-02 起保存格式被静默切成 HTML 的问题，见 [docs/config-audit.md](docs/config-audit.md)）
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - **保存格式**：自解压 ZIP（universal）—— `compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联 `data:` URI）；选项页的「格式」下拉会按下拉重写这三个键。2026-09-02 曾把它误当「压缩内容」关掉导致归档静默失效，2026-09-21 已恢复（详见 [docs/config-audit.md](docs/config-audit.md)）。
 - 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项。
