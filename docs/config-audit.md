@@ -4,13 +4,14 @@
 - 审计对象：`singlefile-settings-HFA.json`
 - 适用版本：SingleFile 1.27.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
 - 审计基准：commit `5ef7af9`（1.26.5 核对后状态，148 键）
-- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名 + 1.27.0 的换键（移除 `compressCSS`、新增 `imageQuality`），148 键（1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未改动配置面，键集与取值均无变化）；2026-09-23 上调懒加载缩放下限与空闲等待（见「三、发现与处置」9）
+- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名 + 1.27.0 的换键（移除 `compressCSS`、新增 `imageQuality`），148 键（1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未改动配置面，键集与取值均无变化）；2026-09-23 上调懒加载缩放下限与空闲等待（见「三、发现与处置」9）；2026-09-28 复核后调整 `networkTimeout` 与 `passReferrerOnError`（见「三、发现与处置」10）
 - 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.27.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.15...v1.6.19` 逐条核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
 - **结构健康**：JSON 语法有效；148 键与上游 `DEFAULT_CONFIG` 键集完全一致；无影响高保真目标的矛盾配置。发现并修复 1 处**保存格式被静默切换**的历史问题（`compressContent` 被误当作「压缩内容」关掉，见下条），无其他强制修改项。
 - **1.27.0 上游核对（2026-09-28，换键 2 处）**：上游本版第一次真正改动配置面 —— `src/core/bg/config.js` 的 `DEFAULT_CONFIG` 相比 1.26.5 只差两行：删除 `compressCSS`（自 core 1.6.15 起即无效果、vendored UglifyCSS 一并移除；选项名仍被接受，旧设置仍有效）、新增 `imageQuality`（默认 `0.8`，经选项页的图片质量输入框设置，`imageReductionFactor = 1` 时该输入框被禁用）。`DEPRECATED_OPTION_NAMES`、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则均未变，文件名替换表逐字节相同；`src/core/bg/external-messages.js` 的 `CAPTURE_OPTION_NAMES` 同步以 `imageQuality` 替换 `compressCSS`（外部 API 可用名变更）。本文件已删除 `compressCSS`、合入 `imageQuality = 1`（HFA 刻意取上限，非上游默认 `0.8`），键数仍为 148，与 1.27.0 的 `DEFAULT_CONFIG` 键集**完全一致**（脚本比对：无缺失、无多余、键序仍为码位升序）。同版把内置 core 由 1.6.14 升到 1.6.19，逐条核对可达性后均不新增键（见「三、发现与处置」1 的 1.27.0 复核）；`DEFAULT_MAX_APPENDED_DATA_LENGTH` 在 1.6.15~1.6.19 仍为 **16361**，`maxAppendedDataLength` 无需调整。
+- **148 键全面复核（2026-09-28，同轮）**：借 1.27.0 改动键集之机，对全部 148 键逐键比对上游 `v1.27.0` 的 `DEFAULT_CONFIG` 并核对语义，挑出 28 个偏离默认值项，逐一确认其与「保真优先」一致或无害，未发现相互矛盾 / 相互旁路的配置（含 `compressContent` 那类「键值对但行为被别的开关旁路」的复查）；同时修正 2 个会削弱抓取完整度的键——`networkTimeout` `30000` → `0`（不设资源抓取超时，30 秒截止会把慢响应资源留成外链）、`passReferrerOnError` `false` → `true`（跨源抓取补发页面 `Referer`）；并纠正 README 把「不设超时（上游默认 0）」误写为「放宽到 30 秒」的表述。详见「三、发现与处置」10。
 - **1.26.5 上游核对（2026-09-24）**：上游本版把内置的 single-file-core 由 1.6.11 升到 1.6.14（扩展自身只改了 Firefox 下载分支、编辑器影子根处理、版本号与 lockfile，`src/` 下配置相关文件无改动）。`src/core/bg/config.js` 与 `v1.26.4` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.5 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.12 / 1.6.13 / 1.6.14 的改动集中在非法嵌套修复与「再次保存已保存页面」的序列化：1.6.12 让 HTML 解析器会丢弃的元素（form 套 form、表格单元在表格外）以注释对形式随存档保留、把影子根也纳入非法嵌套修复（需修复的闭合影子根改存为 open）、加载时重建链接套链接；1.6.13 修 1.6.10 引入的回归（开启 compressHTML 时非法嵌套页面把元素挪到父节点末尾，如 Google Gemini 聊天输入框；本配置 `compressHTML = false` 故该症状不触发），并把 `<style>` / `<script>` 里 `/>` 的转义改为只转义 `</`（修再次保存时反斜杠累积、Gemini 列表标记丢失，**不受 `compressHTML` 门控、对本配置生效**）、再次保存时 `<meta name=referrer>` 就地替换而非追加；1.6.14 只把 infobar 闪烁动画改为独立覆盖层（纯观感，受 `animateInfobar = true` 影响）。`DEFAULT_MAX_APPENDED_DATA_LENGTH` 在 1.6.12 / 1.6.13 / 1.6.14 均为 **16361**，`maxAppendedDataLength` 无需调整（见「三、发现与处置」1）。
 - **1.26.4 上游核对（2026-09-23）**：上游本版只把内置的 single-file-core 由 1.6.10 升到 1.6.11（扩展自身只改了版本号与 lockfile，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.3` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.4 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.11 只修一处 1.6.10 引入的回归：页面内「链接套链接」的非法嵌套（如 Substack 首页）会保存失败并报 `HierarchyRequestError` —— 此前嵌套修复把待复位元素按逆文档序恢复，可能把元素插回它自己的后代；现改为按正序（祖先在前）恢复。该修复在**所有页面的 DOM 修复路径**上无条件执行，属保真度提升（让这类页面可保存），不涉及任何配置键（见「三、发现与处置」1）。
 - **键语义补全（2026-09-23）**：上一版「语义待确证清单」的 4 个键（`insertEmbeddedImage` / `insertEmbeddedScreenshotImage` / `moveStylesInHead` / `saveFilenameTemplateData`）本轮已逐一到 `v1.26.4` 源码确证，清单清空；4 键在本配置均为 `false`，不影响现有行为（见「五、键语义补充」）。
@@ -24,7 +25,7 @@
 - **1.24.0 升级核对（2026-09-04）**：上版 137 键与 1.24.0 真实导出逐键值一致，配置无需功能性调整；唯一差异是 GitHub 5 键随全量导出回潮，已按导出原样纳入。
 - 大量 `false` / 空值均为 SingleFile 全量导出的默认状态，无需处理。
 
-## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进 + 1.27.0 换键；1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式，2026-09-23 完成懒加载保真调优，2026-09-28 随 1.27.0 移除 `compressCSS`、新增 `imageQuality`）
+## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进 + 1.27.0 换键；1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式，2026-09-23 完成懒加载保真调优，2026-09-28 随 1.27.0 移除 `compressCSS`、新增 `imageQuality`，并完成 148 键全面复核与两处抓取完整度调整）
 
 - profile：仅 `__Default_Settings__`
 - 规则：1 条，`url = "*"` → `__Default_Settings__`；`autoSaveProfile = __Disabled_Settings__`（SingleFile 内置隐藏 profile，不出现在导出中，属正常）
@@ -34,6 +35,7 @@
 - 2026-09-21 值调整：`compressContent`：`false` → `true`（修正 `35b299b` 的静默格式切换，恢复自解压归档）；`selfExtractingArchive` / `extractDataFromPage`：恢复为 `true`（`df71ed2` 曾误按 HTML 格式改为 `false`）。键集不变，仍为 148 键；详见「三、发现与处置」2
 - 2026-09-23 值调整：`loadDeferredContentMinZoomFactor`：`0` → `0.5`；`loadDeferredContentMaxIdleTime`：`10000` → `20000`。键集不变，仍为 148 键；详见「三、发现与处置」9
 - 2026-09-28 换键（1.27.0）：移除 `compressCSS`（布尔，自 core 1.6.15 起无效果）、新增 `imageQuality = 1`（数字；HFA 刻意取上限，上游默认为 `0.8`）。键数不变，仍为 148 键，与上游 `DEFAULT_CONFIG` 完全一致；详见「三、发现与处置」1 与「五」
+- 2026-09-28 值调整（同轮 148 键全面复核）：`networkTimeout`：`30000` → `0`（不设资源抓取超时）；`passReferrerOnError`：`false` → `true`（跨源抓取补发页面 `Referer`）。键集不变，仍为 148 键；详见「三、发现与处置」10
 - 键序：与导出格式一致，按码位升序排列（已校验）
 
 ## 二、键分类
@@ -43,9 +45,11 @@
 - 压缩关闭（页面自身）：`compressHTML = false`，保存页里的 HTML 保持可读格式。`compressCSS` 已于 1.27.0 从配置中移除（自 core 1.6.15 起即无效果）。注意 `compressContent` **不属于**这一类：它是保存格式总开关（见「归档 / 保存格式」）
 - 屏蔽关闭：`blockScripts` / `blockStylesheets` / `blockImages` / `blockFonts` / `blockVideos` / `blockAudios` / `blockAlternativeImages` / `blockMixedContent` 等均为 `false`
 - 清理关闭：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` / `removeAlternativeFonts` / `removeAlternativeImages` / `removeAlternativeMedias` / `removeNoScriptTags` / `removeSavedDate` 等均为 `false`
-- 等待与超时：`loadDeferredContent = true`（`loadDeferredContentMaxIdleTime = 20000` ms，`loadDeferredContentDispatchScrollEvent = true`）；`networkTimeout = 30000` ms；`loadDeferredContentMinZoomFactor = 0.5`（懒加载阶段缩放下限，2026-09-23 由上游默认 `0` 上调，见「三、发现与处置」9）
+- 等待与超时：`loadDeferredContent = true`（`loadDeferredContentMaxIdleTime = 20000` ms，`loadDeferredContentDispatchScrollEvent = true`）；`networkTimeout = 0`（不设资源抓取超时，2026-09-28 由 `30000` 改回上游默认，见「三、发现与处置」10）；`loadDeferredContentMinZoomFactor = 0.5`（懒加载阶段缩放下限，2026-09-23 由上游默认 `0` 上调，见「三、发现与处置」9）
 - 单资源上限检查关闭：`maxResourceSizeEnabled = false`
 - 图片不缩放：`imageReductionFactor = 1`（上游默认，不做缩放）；1.27.0 新增的 `imageQuality = 1` 仅在 `imageReductionFactor > 1` 时才有意义，本配置下为惰性键；即便如此仍刻意取上限 `1`（而非上游默认 `0.8`），以免将来启用缩放时悄悄降质（见「五」）
+- 抓取完整性：`passReferrerOnError = true`（跨源抓取补发页面 `Referer`，提高防盗链 / 需要 Referer 的资源成功率，2026-09-28 调整）；`networkTimeout = 0`（不设资源抓取超时，见上）
+- 失效 / 惰性键（导出携带但当前无实际作用）：`blockAlternativeImages`（core 源码无引用）、`maxResourceSize = 15`（`maxResourceSizeEnabled = false`）、`maxSizeDuplicateImages = 1048576`（归档路径去重不受该键控制）、`autoSaveDelay = 3`（自动保存全关）；均为无害项，见「三、发现与处置」10
 - 存档信息：`saveFavicon` / `saveOriginalURLs` / `resolveLinks` / `replaceBookmarkURL` / `insertSingleFileComment` / `insertMetaNoIndex` / `insertMetaCSP` / `insertCanonicalLink` 均为 `true`（`insertCanonicalLink` 在 1.24.x 中不可配置，由抓取入口 `src/core/content/content.js` 硬编码为 `true`；1.25.0 起提升为一等选项、默认 `true`，1.26.0 起选项页有复选框 —— 本配置行为前后一致）
 
 ### 服务族（全关留空，当前无实际作用）
@@ -170,8 +174,17 @@
    动机：全面评审时确认这两处会实际影响「动态内容抓全」的保真度。
    - `loadDeferredContentMinZoomFactor`：`0` → `0.5`。源码依据：懒加载开始时按 `zoomFactor = Math.max(Math.min(verticalZoomFactor, horizontalZoomFactor), minZoomFactor || 0)` 缩放页面（`core/processors/hooks/content/content-hooks-frames-web.js:296-298`），`0` 表示不设下限，长页面会被缩到极小（如 0.05），使依赖布局 / IntersectionObserver 的懒加载不再触发；设 `0.5` 给缩放兜底，`0.5` 落在有效区间 (0, 1] 内。
    - `loadDeferredContentMaxIdleTime`：`10000` → `20000` ms。给迟到的动态内容更多等待时间（页面空闲的最长等待窗口）。
-   - 未改项：`includeInfobar`（保留保存页 infobar）、`insertMetaCSP`（保留自包含 CSP）、`networkTimeout = 30000`（按原值保留）。
+   - 未改项：`includeInfobar`（保留保存页 infobar）、`insertMetaCSP`（保留自包含 CSP）。（`networkTimeout` 曾按原值 `30000` 保留，2026-09-28 复核时改为 `0`，见「三、发现与处置」10。）
    - 键集不变，仍为 148 键，与上游 `DEFAULT_CONFIG` 完全一致。
+
+10. **全面复核：148 键无相互矛盾，两处抓取完整度调整（2026-09-28，改 2 键）**
+   动机：1.27.0 首次改动键集后，对全部 148 键做一次系统复核——逐键与上游 `v1.27.0` 的 `DEFAULT_CONFIG` 比对，挑出全部 28 个偏离默认值的键，再对每个键到 `v1.27.0` / core `v1.6.19` 源码确认「实际作用」及其与 HFA 目标是否一致；同时复查有没有「键集 / 键值都对、却被别的开关旁路」的情况（`compressContent` 那类教训）。
+   结论一（无矛盾）：28 个偏离项全部与「保真优先」一致或无害。关闭屏蔽 / 清理 / 页面压缩，或打开归档格式与存档元信息的有：`blockAlternativeImages` / `blockAudios` / `blockScripts` / `blockVideos`、`removeAlternativeFonts` / `removeAlternativeImages` / `removeAlternativeMedias` / `removeHiddenElements` / `removeNoScriptTags` / `removeUnusedFonts` / `removeUnusedStyles`、`compressHTML`、`compressContent` / `selfExtractingArchive` / `extractDataFromPage`、`saveOriginalURLs`、`includeInfobar`、`insertMetaNoIndex`、`filenameTemplate`、`loadDeferredContentMaxIdleTime` / `loadDeferredContentMinZoomFactor`、`imageQuality`。其余三类：①在 HFA 已关闭的开关之后惰性——`maxResourceSize = 15`（`maxResourceSizeEnabled = false`）、`maxSizeDuplicateImages = 1048576` 与 `groupDuplicateImages`（归档路径 `core/lib/processor-helper.js` 的 `groupDuplicateImages` 按字节去重、不接受该键与上限，仅内联路径 `processor-helper-inline.js` 受控）、`autoSaveDelay = 3`（自动保存全关）；②与保真无关——`backgroundSave = false` 只决定产物下载在哪个上下文发起（`src/core/bg/downloads.js`：前台下载走 `downloadPageForeground`），不影响抓取内容；`processInForeground = false` 只决定并发度（`src/core/bg/business.js`：`maxParallelWorkers = processInForeground ? 1 : 12`）；③纯观感 / 主题 / 菜单项。归档路径的 CSP 经 `core/lib/processor-helper.js` 的 `setMetaCSP` 确认 `script-src 'self' 'unsafe-inline' data: blob:`，与自解压脚本兼容（`insertMetaCSP = true` 不破坏归档）。另注：`blockAlternativeImages` 在 core 源码中无任何引用，是扩展导出携带的失效键，无副作用。
+   结论二（2 处调整）：
+   - `networkTimeout`：`30000` → `0`。源码依据：`core/util.js` 的 `getContent()` 只在「取响应」阶段与 `setTimeout(reject, networkTimeout)` 竞赛（`response.arrayBuffer()` 在该竞赛之外、本就不受超时约束）；超时即返回 `getFailedFetchResponse()`（`failed = true`），除样式表有「回退到页面已加载规则」外，其余资源会保留为原始外链、不再内嵌——即 30 秒的截止会把慢响应资源变成存档里的外链。上游默认即 `0`（不设超时），HFA 取 `0`，不做任何提前放弃。
+   - `passReferrerOnError`：`false` → `true`。源码依据：`core/index.js` 中该键为真时把 `options.resourceReferrer` 设为页面目录 URL，`core/util.js` 的 `getContent()` 将其作为 `referrer` 传给抓取；扩展侧 `src/core/bg/requests.js` 的 `injectRefererHeader` 只对携带 SingleFile 请求 ID、且自身没有 `Referer` 的请求补发。对要求 Referer / 防盗链的资源提高抓取成功率，仅在原本无 Referer 时生效。
+   - 键集不变，仍为 148 键，与上游 `DEFAULT_CONFIG` 完全一致；`imageQuality` 取值一并由上游默认 `0.8` 定为 `1`（见「五」）。
+   - 文档修正：README 原写「网络请求超时放宽到 30 秒」与上游默认 `0` 的事实相反（30 秒是收紧、不是放宽），已改为「不设超时」，并补记 `passReferrerOnError`。
 
 ## 四、跟进建议
 
