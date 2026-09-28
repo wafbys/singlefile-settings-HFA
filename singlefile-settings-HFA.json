@@ -99,7 +99,7 @@
       "groupDuplicateImages": true,
       "groupDuplicateStylesheets": false,
       "ignoredBookmarkFolders": [],
-      "imageQuality": 0.8,
+      "imageQuality": 1,
       "imageReductionFactor": 1,
       "includeBOM": false,
       "includeInfobar": true,
