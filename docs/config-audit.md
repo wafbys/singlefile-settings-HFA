@@ -1,15 +1,16 @@
 # HFA 配置审计报告
 
-- 审计日期：2026-09-24（1.26.5 上游核对；此前 2026-09-23 1.26.4 上游核对 + 全面评审与懒加载保真调优，同日稍早 1.26.3 上游核对，2026-09-22 1.26.2 上游核对、2026-09-21 1.26.1 上游核对、2026-09-17 1.26.0 上游核对、2026-09-14 1.24.3 上游核对、2026-09-04 升级复核、2026-09-02 初审）
+- 审计日期：2026-09-28（1.27.0 上游核对；此前 2026-09-24 1.26.5 上游核对、2026-09-23 1.26.4 上游核对 + 全面评审与懒加载保真调优，同日稍早 1.26.3 上游核对，2026-09-22 1.26.2 上游核对、2026-09-21 1.26.1 上游核对、2026-09-17 1.26.0 上游核对、2026-09-14 1.24.3 上游核对、2026-09-04 升级复核、2026-09-02 初审）
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.26.5（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
-- 审计基准：commit `9fc9c62`（1.26.2 核对后状态，148 键）
-- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名，148 键（1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未改动配置面，键集与取值均无变化）；2026-09-23 上调懒加载缩放下限与空闲等待（见「三、发现与处置」9）
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.26.5` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.11...v1.6.14` 逐条核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
+- 适用版本：SingleFile 1.27.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 审计基准：commit `5ef7af9`（1.26.5 核对后状态，148 键）
+- 当前状态：1.24.0 导出基线 + 1.24.3 / 1.25.0 / 1.26.0 的新增键与改名 + 1.27.0 的换键（移除 `compressCSS`、新增 `imageQuality`），148 键（1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未改动配置面，键集与取值均无变化）；2026-09-23 上调懒加载缩放下限与空闲等待（见「三、发现与处置」9）
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.27.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core `v1.6.15...v1.6.19` 逐条核对改动是否可达 —— JSON 结构、内部一致性、字段语义归类；源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
 - **结构健康**：JSON 语法有效；148 键与上游 `DEFAULT_CONFIG` 键集完全一致；无影响高保真目标的矛盾配置。发现并修复 1 处**保存格式被静默切换**的历史问题（`compressContent` 被误当作「压缩内容」关掉，见下条），无其他强制修改项。
+- **1.27.0 上游核对（2026-09-28，换键 2 处）**：上游本版第一次真正改动配置面 —— `src/core/bg/config.js` 的 `DEFAULT_CONFIG` 相比 1.26.5 只差两行：删除 `compressCSS`（自 core 1.6.15 起即无效果、vendored UglifyCSS 一并移除；选项名仍被接受，旧设置仍有效）、新增 `imageQuality`（默认 `0.8`，经选项页的图片质量输入框设置，`imageReductionFactor = 1` 时该输入框被禁用）。`DEPRECATED_OPTION_NAMES`、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则均未变，文件名替换表逐字节相同；`src/core/bg/external-messages.js` 的 `CAPTURE_OPTION_NAMES` 同步以 `imageQuality` 替换 `compressCSS`（外部 API 可用名变更）。本文件已按上游默认值合入 `imageQuality = 0.8`、删除 `compressCSS`，键数仍为 148，与 1.27.0 的 `DEFAULT_CONFIG` 键集**完全一致**（脚本比对：无缺失、无多余、键序仍为码位升序）。同版把内置 core 由 1.6.14 升到 1.6.19，逐条核对可达性后均不新增键（见「三、发现与处置」1 的 1.27.0 复核）；`DEFAULT_MAX_APPENDED_DATA_LENGTH` 在 1.6.15~1.6.19 仍为 **16361**，`maxAppendedDataLength` 无需调整。
 - **1.26.5 上游核对（2026-09-24）**：上游本版把内置的 single-file-core 由 1.6.11 升到 1.6.14（扩展自身只改了 Firefox 下载分支、编辑器影子根处理、版本号与 lockfile，`src/` 下配置相关文件无改动）。`src/core/bg/config.js` 与 `v1.26.4` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.5 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.12 / 1.6.13 / 1.6.14 的改动集中在非法嵌套修复与「再次保存已保存页面」的序列化：1.6.12 让 HTML 解析器会丢弃的元素（form 套 form、表格单元在表格外）以注释对形式随存档保留、把影子根也纳入非法嵌套修复（需修复的闭合影子根改存为 open）、加载时重建链接套链接；1.6.13 修 1.6.10 引入的回归（开启 compressHTML 时非法嵌套页面把元素挪到父节点末尾，如 Google Gemini 聊天输入框；本配置 `compressHTML = false` 故该症状不触发），并把 `<style>` / `<script>` 里 `/>` 的转义改为只转义 `</`（修再次保存时反斜杠累积、Gemini 列表标记丢失，**不受 `compressHTML` 门控、对本配置生效**）、再次保存时 `<meta name=referrer>` 就地替换而非追加；1.6.14 只把 infobar 闪烁动画改为独立覆盖层（纯观感，受 `animateInfobar = true` 影响）。`DEFAULT_MAX_APPENDED_DATA_LENGTH` 在 1.6.12 / 1.6.13 / 1.6.14 均为 **16361**，`maxAppendedDataLength` 无需调整（见「三、发现与处置」1）。
 - **1.26.4 上游核对（2026-09-23）**：上游本版只把内置的 single-file-core 由 1.6.10 升到 1.6.11（扩展自身只改了版本号与 lockfile，`src/` 下无源码改动）。`src/core/bg/config.js` 与 `v1.26.3` **逐字节相同**（SHA-256 同为 `D45E954703C812C4D7C960F5D3ED409E8EBAB99D2203DCB99088C2A4753D94E1`），所以 `DEFAULT_CONFIG`（148 键）、改名表、`upgrade()` 迁移逻辑与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则全部不变；本地 148 键与 1.26.4 的 `DEFAULT_CONFIG` 键集**完全一致**，**版本同步本身不需要改动任何键**。core 1.6.11 只修一处 1.6.10 引入的回归：页面内「链接套链接」的非法嵌套（如 Substack 首页）会保存失败并报 `HierarchyRequestError` —— 此前嵌套修复把待复位元素按逆文档序恢复，可能把元素插回它自己的后代；现改为按正序（祖先在前）恢复。该修复在**所有页面的 DOM 修复路径**上无条件执行，属保真度提升（让这类页面可保存），不涉及任何配置键（见「三、发现与处置」1）。
 - **键语义补全（2026-09-23）**：上一版「语义待确证清单」的 4 个键（`insertEmbeddedImage` / `insertEmbeddedScreenshotImage` / `moveStylesInHead` / `saveFilenameTemplateData`）本轮已逐一到 `v1.26.4` 源码确证，清单清空；4 键在本配置均为 `false`，不影响现有行为（见「五、键语义补充」）。
@@ -23,26 +24,28 @@
 - **1.24.0 升级核对（2026-09-04）**：上版 137 键与 1.24.0 真实导出逐键值一致，配置无需功能性调整；唯一差异是 GitHub 5 键随全量导出回潮，已按导出原样纳入。
 - 大量 `false` / 空值均为 SingleFile 全量导出的默认状态，无需处理。
 
-## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进；1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式，2026-09-23 完成懒加载保真调优）
+## 一、结构总览（当前状态，148 键 = 1.24.0 导出基线 + 上游 1.24.3 / 1.25.0 / 1.26.0 演进 + 1.27.0 换键；1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 均未引入配置变更，2026-09-21 恢复了被静默切换的保存格式，2026-09-23 完成懒加载保真调优，2026-09-28 随 1.27.0 移除 `compressCSS`、新增 `imageQuality`）
 
 - profile：仅 `__Default_Settings__`
 - 规则：1 条，`url = "*"` → `__Default_Settings__`；`autoSaveProfile = __Disabled_Settings__`（SingleFile 内置隐藏 profile，不出现在导出中，属正常）
 - 顶层：`maxParallelWorkers = 12`、`processInForeground = false`
-- 键类型分布：布尔 98（true 27 / false 71）、字符串 31（空 21 / 非空 10）、数字 13、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
+- 键类型分布：布尔 97（true 27 / false 70）、字符串 31（空 21 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 相对 1.24.3 核对状态（commit `783b206`，143 键）：7 个 `loadDeferredImages*` 键退出、12 个键名加入（8 个 `loadDeferredContent*` + 4 个其他），共 148 键；键值丢失 0（见「三、发现与处置」）
 - 2026-09-21 值调整：`compressContent`：`false` → `true`（修正 `35b299b` 的静默格式切换，恢复自解压归档）；`selfExtractingArchive` / `extractDataFromPage`：恢复为 `true`（`df71ed2` 曾误按 HTML 格式改为 `false`）。键集不变，仍为 148 键；详见「三、发现与处置」2
 - 2026-09-23 值调整：`loadDeferredContentMinZoomFactor`：`0` → `0.5`；`loadDeferredContentMaxIdleTime`：`10000` → `20000`。键集不变，仍为 148 键；详见「三、发现与处置」9
+- 2026-09-28 换键（1.27.0）：移除 `compressCSS`（布尔，自 core 1.6.15 起无效果）、新增 `imageQuality = 0.8`（数字，上游默认）。键数不变，仍为 148 键，与上游 `DEFAULT_CONFIG` 完全一致；详见「三、发现与处置」1 与「五」
 - 键序：与导出格式一致，按码位升序排列（已校验）
 
 ## 二、键分类
 
 ### 高保真核心（刻意设置、生效中）
 
-- 压缩关闭（页面自身）：`compressHTML` / `compressCSS` 均为 `false`，保存页里的 HTML / CSS 保持可读格式。注意 `compressContent` **不属于**这一类：它是保存格式总开关（见「归档 / 保存格式」）
+- 压缩关闭（页面自身）：`compressHTML = false`，保存页里的 HTML 保持可读格式。`compressCSS` 已于 1.27.0 从配置中移除（自 core 1.6.15 起即无效果）。注意 `compressContent` **不属于**这一类：它是保存格式总开关（见「归档 / 保存格式」）
 - 屏蔽关闭：`blockScripts` / `blockStylesheets` / `blockImages` / `blockFonts` / `blockVideos` / `blockAudios` / `blockAlternativeImages` / `blockMixedContent` 等均为 `false`
 - 清理关闭：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` / `removeAlternativeFonts` / `removeAlternativeImages` / `removeAlternativeMedias` / `removeNoScriptTags` / `removeSavedDate` 等均为 `false`
 - 等待与超时：`loadDeferredContent = true`（`loadDeferredContentMaxIdleTime = 20000` ms，`loadDeferredContentDispatchScrollEvent = true`）；`networkTimeout = 30000` ms；`loadDeferredContentMinZoomFactor = 0.5`（懒加载阶段缩放下限，2026-09-23 由上游默认 `0` 上调，见「三、发现与处置」9）
 - 单资源上限检查关闭：`maxResourceSizeEnabled = false`
+- 图片不缩放：`imageReductionFactor = 1`（上游默认，不做缩放）；1.27.0 新增的 `imageQuality = 0.8` 仅在 `imageReductionFactor > 1` 时才有意义，本配置下为惰性键、按上游默认合入（见「五」）
 - 存档信息：`saveFavicon` / `saveOriginalURLs` / `resolveLinks` / `replaceBookmarkURL` / `insertSingleFileComment` / `insertMetaNoIndex` / `insertMetaCSP` / `insertCanonicalLink` 均为 `true`（`insertCanonicalLink` 在 1.24.x 中不可配置，由抓取入口 `src/core/content/content.js` 硬编码为 `true`；1.25.0 起提升为一等选项、默认 `true`，1.26.0 起选项页有复选框 —— 本配置行为前后一致）
 
 ### 服务族（全关留空，当前无实际作用）
@@ -71,7 +74,7 @@
 
 ## 三、发现与处置
 
-1. **1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 上游核对：配置面零变化，core 升级未绕过 HFA 已关闭的裁剪开关（2026-09-21 / 2026-09-22 / 2026-09-23 / 2026-09-23 / 2026-09-24，无需改动）**
+1. **1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 上游核对：配置面零变化，core 升级未绕过 HFA 已关闭的裁剪开关（2026-09-21 / 2026-09-22 / 2026-09-23 / 2026-09-23 / 2026-09-24，无需改动）；1.27.0 上游核对：配置面换键 2 处（2026-09-28，见本条末「1.27.0 复核」）**
    比对方式：本地 148 键 vs 上游 `v1.26.1` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键），脚本键级比对（结果：无缺失、无多余、键序仍为码位升序）；再用各配置相关文件的**最后提交时间**确认本版根本没碰配置面。
    证据链（配置面）：
    - `src/core/bg/config.js` 最后一次提交是 `eb69c68`（2026-09-16 21:35 UTC，"add an option to animate the infobar"），**早于** `v1.26.0` 标签（2026-09-16 23:35 UTC）→ 该文件在 1.26.0 与 1.26.1 中逐字节相同：`DEFAULT_CONFIG`（148 键）、`DEPRECATED_OPTION_NAMES`（7 项改名表）、`upgrade()` 的全部迁移与 `LEGACY_FILENAME_REPLACED_CHARACTERS` 重置规则都没有变化，1.26.0 那轮的结论对 1.26.1 直接成立。
@@ -112,6 +115,13 @@
     - core 常量复核：`single-file-core` v1.6.12 / v1.6.13 / v1.6.14 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）均仍为 **16361**，`maxAppendedDataLength` 无需调整。
     - 结论：1.26.5 对本配置的**键集与键值无影响**，无需为它调整任何键；1.6.12 的非法嵌套 / 丢弃元素保留、1.6.13 的转义与 referrer 修复都在 HFA 已启用的保存路径上无条件生效，属保真度收益。
     精确性说明：core 侧结论以 v1.6.7（1.26.1）、v1.6.9（1.26.2）、v1.6.10（1.26.3）、v1.6.11（1.26.4）与 v1.6.12 / v1.6.13 / v1.6.14（1.26.5）标签下的**端状态**源码为据，未与更早版本逐行 diff，故「某项行为是否自某版起才如此」不作断言；`v1.26.1`~`v1.26.5` 标签的 `package.json` 写的是 `"single-file-core": "^1.6.5"`（caret 区间，构建时按 lockfile 解析），「实际打包 1.6.7 / 1.6.9 / 1.6.10 / 1.6.11 / 1.6.14」取自各自的 `package-lock.json` 与上游发布说明，而非构建产物核对。
+    1.27.0 复核（2026-09-28）：`v1.26.5...v1.27.0` 共 9 个提交。配置相关文件逐行核对：`src/core/bg/config.js` 只差两行（删 `compressCSS`、末尾加 `imageQuality`），`src/core/bg/external-messages.js` 的 `CAPTURE_OPTION_NAMES` 只差一行（`compressCSS` → `imageQuality`），`src/ui/common/filename-replacement.js` 逐字节相同 → `DEPRECATED_OPTION_NAMES`、`upgrade()` 迁移与文件名重置规则均不变；本地 148 键与 1.27.0 的 `DEFAULT_CONFIG` 脚本比对，仍为无缺失、无多余。本版其余源码改动逐条判定如下：
+    - 配置面（**本版唯一改变键集的地方，已合入**）：① `compressCSS` 移除 —— 自 core 1.6.15 起该键已无效果（vendored UglifyCSS 被删除；官方在 24 个真实页面上实测仅省 0.015%、6 个反而变大，且会把 `background:none` 改成 `background:0` 从而移动背景图），选项名仍被接受、旧设置仍有效，但导出不再包含该键，故从本文件删除（本配置原值 `false`，本就关闭）。② `imageQuality` 新增（默认 `0.8`，数字 0~1）—— 用 `imageReductionFactor` 缩放图片后重新编码 JPEG / WebP 的质量（1 时 Chromium / Firefox 以无损 WebP 编码），对 PNG 无效、`imageReductionFactor = 1` 时无效；本配置 `imageReductionFactor = 1`（不缩放），故属惰性键，按上游默认合入，键数保持 148（布尔 -1、数字 +1）。
+    - core 1.6.15（`core/helper.js`、`core/index.js`、`modules/html-serializer.js` 等）：影子根修复 —— `delegatesFocus` 因收集键名拼错而丢失、`slotAssignment: "manual"` 被存成普通命名根导致子节点错位，现按捕获时标记在保存页中还原；`<model>` 的 `<source>` 子节点与 `environmentmap` 属性现按各自类型抓取嵌入；无预期类型的资源（`<object>` / `<embed>` 里的 PDF、`<track>`、`<model>`）不再发出字面量 `Accept: undefined`；unused-styles 对 `revert-rule`、厂商前缀值、回退值、`@when` / `@else` 的精度修复。前两项在捕获 / 序列化路径无条件生效（属保真度收益、不改键），`Accept` 修复在资源抓取路径无条件生效；unused-styles 四项挂在 `removeUnusedStyles` 之后（本配置 `false`，不可达）。
+    - core 1.6.16 ~ 1.6.19：主体是 `imageReductionFactor` 缩放链路（Chromium 缩放 WebP 由默认无损改为按 `imageQuality` 有损、`<canvas>` 快照也纳入缩放、编码失败不再挂起、无尺寸的 SVG `<image>` 写回原尺寸、放大的小图回退原图以免变大）与 `removeUnusedStyles` 的嵌套选择器特异性修复，以及 `<link>` 样式表抓取失败时回退页面已加载规则（Firefox 跨源可读）、`background` 属性图片不再缩放、`referrerpolicy` 属性传递与跨源 referrer 计算、`data-single-file-stylesheet` 残留属性清理。可达性：缩放链路全部挂在 `imageReductionFactor > 1` 之后（本配置 `= 1`，不可达，仅由它引入 `imageQuality` 键）；`removeUnusedStyles` 修复不可达；`<link>` 回退、`referrerpolicy` 传递与残留属性清理在 HFA 已启用的保存路径上无条件生效，属保真度收益，不产生新键。
+    - 扩展自身：`src/lib/single-file/fetch/content/content-fetch.js` 增加「外部样式表的 `Referrer-Policy` 给出 none 时不发送 `Referer`」的判定（新增 `isStylesheetReferrerEmpty()` 与策略常量 `REFERRER_POLICIES` / `DOWNGRADE_EMPTY_POLICIES`），服务于 core 1.6.18 的跨源 referrer 计算；`src/core/bg/editor.js`、`src/core/common/download.js`、`src/core/content/content-bootstrap.js` 把分块传输的结束判定由 `>` 改为 `>=`（内容长度恰为 `MAX_CONTENT_SIZE` 整数倍时不再多等一块 / 永不结束，SingleFile#2004）；`src/ui/bg/ui-options.js` 用图片质量输入框替换压缩 CSS 复选框（取值 0~1，`imageReductionFactor = 1` 时禁用），`options.html` / `help*.html` / 各语言 `messages.json` 同步。均为行为修复或 UI 适配，不新增配置键。
+    - core 常量复核：`single-file-core` v1.6.15 ~ v1.6.19 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH`（`processors/compression/compression-constants.js`）均仍为 **16361**，`maxAppendedDataLength` 无需调整。
+    - 结论：1.27.0 又一次真正改动配置面（键集换 2 处、数量不变），本文件已按上游默认合入；其余 core / 扩展改动或在 HFA 已关闭的开关之后不可达、或在已启用路径上无条件生效属保真度收益，均不新增键。
 
 2. **保存格式被静默切成 HTML：已恢复自解压 ZIP (universal)（2026-09-21 发现并修复，改 3 键）**
    现象：1.26.1 的选项页用**一个「格式」下拉**同时驱动三个键 —— `compressContent = fileFormatSelectInput.value.includes("zip")`、`selfExtractingArchive = …includes("self-extracting")`、`extractDataFromPage = value == "self-extracting-zip-universal"`（`src/ui/bg/ui-options.js` 的 `update()`；下拉项见 `src/ui/pages/options.html`，文案见 `_locales/en/messages.json`：HTML / self-extracting ZIP / self-extracting ZIP (universal) / ZIP）。**没有任何控件直接绑定 `compressContent` 或 `selfExtractingArchive`**，所以「`compressContent = false` + `selfExtractingArchive = true` + `extractDataFromPage = true`」这个组合**不可能由 UI 产生**。
@@ -154,7 +164,7 @@
 7. **大量默认关闭项**（71 个 `false` 布尔、21 个空字符串）
    判定：SingleFile 全量导出自带状态，非刻意配置，无需处理。
 8. **配置漂移风险（跟踪项）**
-   本文件是全量导出快照：SingleFile 升级会引入新键、改名与迁移标记；文件本身不记录适用版本，长期不更新会落后于扩展能力，直接覆盖导出又会冲掉刻意设置。1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3、1.26.4、1.26.5 各已完成一轮核对；**改名型变更是目前最大的漂移风险**（旧键被静默删除，取值不迁移），故每轮核对都必须同时检查键集与键值。1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 说明并非每次升级都动配置面：这几版只换了内置 core，配置键集零变化。
+   本文件是全量导出快照：SingleFile 升级会引入新键、改名与迁移标记；文件本身不记录适用版本，长期不更新会落后于扩展能力，直接覆盖导出又会冲掉刻意设置。1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3、1.26.4、1.26.5、1.27.0 各已完成一轮核对；**改名型变更是目前最大的漂移风险**（旧键被静默删除，取值不迁移），故每轮核对都必须同时检查键集与键值。1.26.1 / 1.26.2 / 1.26.3 / 1.26.4 / 1.26.5 说明并非每次升级都动配置面：这几版只换了内置 core，配置键集零变化；1.27.0 则相反 —— 换键 2 处（移除 `compressCSS`、新增 `imageQuality`），说明**删除型变更**（上游判定某键失效后从 `DEFAULT_CONFIG` 摘除）也会出现，核对时同样要逐键比对。
    **新增风险（2026-09-21）**：键集 / 键值全对，不等于行为对。`compressContent` 这类「路径总开关」被误改后，键集仍与上游完全一致、四轮核对都没报警，但保存格式已经从自解压归档变成纯 HTML（见第 2 条）。故每轮核对还需对少数关键键（`compressContent`、`removeUnused*`、`loadDeferredContent*`、`maxResourceSizeEnabled`、`selfExtractingArchive` 等）确认「在 core 的门之后是否仍可达」，并留意 README 里把它当作别的东西描述的痕迹。后续升级时重复本流程。
 9. **高保真调优：懒加载缩放下限与空闲等待上调（2026-09-23，改 2 键）**
    动机：全面评审时确认这两处会实际影响「动态内容抓全」的保真度。
@@ -165,14 +175,14 @@
 
 ## 四、跟进建议
 
-1. 在 README 记录适用的 SingleFile 版本号（2026-09-24 已更新为：SingleFile 1.26.5）。
+1. 在 README 记录适用的 SingleFile 版本号（2026-09-28 已更新为：SingleFile 1.27.0）。
 2. 在 README 固化「刻意设置的键」清单，与导出默认值区分（已并入「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项（1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3、1.26.4、1.26.5 各已执行一轮，见「三、发现与处置」）。**改名型变更需额外注意**：取值迁移与否由扩展的迁移表决定，映射为 `null` 的键会被静默删除并回落到新默认。
-4. 建议将**扩展本体**升级至 1.26.5（2026-09-24 发布；本文件已按 1.26.5 核对）。1.26.5 相对 1.26.4 把内置 core 由 1.6.11 升到 1.6.14（扩展自身改动为 Firefox「文件名冲突时询问」下载分支、编辑器影子根处理与版本号 / lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：非法嵌套修复扩展到「HTML 解析器会丢弃的元素」（form 套 form、表格单元在表格外）与影子根、加载脚本重建链接套链接（元素以注释对形式随存档保留，需修复的闭合影子根改存为 open）；修 1.6.10 引入的回归（开启 `compressHTML` 时非法嵌套页面把元素挪到父节点末尾，如 Google Gemini 聊天输入框 —— 本配置 `compressHTML = false` 不触发）；`<style>` / `<script>` 里 `/>` 只转义 `</`（修再次保存时反斜杠累积、Gemini 列表标记丢失，**不受 `compressHTML` 门控、对本配置生效**）；再次保存时 `<meta name=referrer>` 就地替换而非追加；infobar 闪烁改为独立覆盖层（纯观感）。1.26.4 相对 1.26.3 只把内置 core 由 1.6.10 升到 1.6.11（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：修复「链接套链接」的非法嵌套页面（如 Substack 首页）保存失败报 `HierarchyRequestError` 的回归 —— 嵌套复位由逆文档序改为正序（祖先在前）。该修复在 DOM 修复路径无条件生效，属于保真度收益。1.26.3 相对 1.26.2 只把内置 core 由 1.6.9 升到 1.6.10（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：归档里同一内容的样式表只存一份（`@import` 链自叶向上合并）、SingleFile 自生成的图片（视频 poster、屏蔽视频图标、`<canvas>` 位图）改存文件而非内联 `data:` URI —— 两者都改变产物组织与体积、不影响渲染，本配置走归档路径会实际生效；unused-styles 清理修得更准（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套 `&`、转义标识符、`-webkit-` 前缀值、`@import` 的层与 `supports()` 等，均被本配置 `removeUnusedStyles = false` 关掉）；归档解压到本地后不再丢失带 `crossorigin` 的 `<link>` 样式表。1.26.2 相对 1.26.1 只把内置 core 由 1.6.7 升到 1.6.9（扩展自身只有版本号），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：`removeUnusedStyles` 清理被修得更准 —— `@scope` 内以组合符开头的相对选择器不再被误删、浏览器解析不了的选择器整条不再参与级联（两者都被本配置的 `removeUnusedStyles = false` 关掉，见「三、发现与处置」1），剥离脚本时会一并移除 SVG 动画元素的 `onbegin` / `onend` / `onrepeat`（本配置 `blockScripts = false`，不触发），以及 infobar 涟漪动画不再重复播放。1.26.1 相对 1.26.0 只换了内置 core（1.6.5 → 1.6.7）与俄语翻译；core 侧值得知道的变化：字体面裁剪与空规则移除被修正得更彻底（两者都被本配置的 `removeUnusedFonts` / `removeUnusedStyles = false` 关掉，见「三、发现与处置」1）、归档写入顺序确定化（同一页面两次保存产出相同归档，便于按哈希判断页面是否变化）、自解压页在发现多于一个归档候选时拒绝解压。1.26.0 相对 1.24.0 的保真度变化（保存页不再能提交表单或设置 base URI，`javascript:` URI 在所有属性与命名空间中被净化；资源字节优先于声明的 content type；响应头完整转发且按大小写不敏感查找；页面文档不再受单资源大小上限约束）依旧包含在内；1.24.1–1.24.3 的修复（复合 `@font-face` 规则全部保留、iframe 内 SVG 文档内容保留、sandboxed `srcdoc` iframe 按渲染结果保存、`srcset` 保存失败时不留空属性对、BMP / GIF87a 扩展名识别修正）同理。zip.js 升至 2.15.0 后产出的归档与 1.24.0 逐字节不同 —— 本配置走自解压归档路径，这些归档侧变化都会实际生效。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项（1.24.0、1.24.3、1.26.0、1.26.1、1.26.2、1.26.3、1.26.4、1.26.5、1.27.0 各已执行一轮，见「三、发现与处置」）。**改名型变更需额外注意**：取值迁移与否由扩展的迁移表决定，映射为 `null` 的键会被静默删除并回落到新默认。
+4. 建议将**扩展本体**升级至 1.27.0（2026-09-27 发布；本文件已按 1.27.0 核对）。1.27.0 相对 1.26.5 **会改动配置面**：新增 `imageQuality`（0.8）、移除失效的 `compressCSS`，本文件已同步（键数仍为 148）；同版把内置 core 由 1.6.14 升到 1.6.19（扩展自身改动为 `compressCSS` → `imageQuality` 的选项 UI、样式表 referrer 策略、分块传输边界与版本号 / lockfile）。core 侧值得知道的变化：影子根 `delegatesFocus` / 手动槽位分配修复、`<model>` 资源嵌入、`Accept: undefined` 修复、`<link>` 样式表抓取失败时回退页面已加载规则、`referrerpolicy` 传递、`removeUnusedStyles` 精度修复，以及 `imageReductionFactor` 缩放链路的一批修复（本配置 `imageReductionFactor = 1` 不缩放，均不生效）。1.26.5 相对 1.26.4 把内置 core 由 1.6.11 升到 1.6.14（扩展自身改动为 Firefox「文件名冲突时询问」下载分支、编辑器影子根处理与版本号 / lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：非法嵌套修复扩展到「HTML 解析器会丢弃的元素」（form 套 form、表格单元在表格外）与影子根、加载脚本重建链接套链接（元素以注释对形式随存档保留，需修复的闭合影子根改存为 open）；修 1.6.10 引入的回归（开启 `compressHTML` 时非法嵌套页面把元素挪到父节点末尾，如 Google Gemini 聊天输入框 —— 本配置 `compressHTML = false` 不触发）；`<style>` / `<script>` 里 `/>` 只转义 `</`（修再次保存时反斜杠累积、Gemini 列表标记丢失，**不受 `compressHTML` 门控、对本配置生效**）；再次保存时 `<meta name=referrer>` 就地替换而非追加；infobar 闪烁改为独立覆盖层（纯观感）。1.26.4 相对 1.26.3 只把内置 core 由 1.6.10 升到 1.6.11（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：修复「链接套链接」的非法嵌套页面（如 Substack 首页）保存失败报 `HierarchyRequestError` 的回归 —— 嵌套复位由逆文档序改为正序（祖先在前）。该修复在 DOM 修复路径无条件生效，属于保真度收益。1.26.3 相对 1.26.2 只把内置 core 由 1.6.9 升到 1.6.10（扩展自身只有版本号与 lockfile），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：归档里同一内容的样式表只存一份（`@import` 链自叶向上合并）、SingleFile 自生成的图片（视频 poster、屏蔽视频图标、`<canvas>` 位图）改存文件而非内联 `data:` URI —— 两者都改变产物组织与体积、不影响渲染，本配置走归档路径会实际生效；unused-styles 清理修得更准（`@starting-style`、级联层顺序、`revert-layer`、`@scope`、嵌套 `&`、转义标识符、`-webkit-` 前缀值、`@import` 的层与 `supports()` 等，均被本配置 `removeUnusedStyles = false` 关掉）；归档解压到本地后不再丢失带 `crossorigin` 的 `<link>` 样式表。1.26.2 相对 1.26.1 只把内置 core 由 1.6.7 升到 1.6.9（扩展自身只有版本号），无论升级与否都不影响本配置的键集；core 侧值得知道的变化：`removeUnusedStyles` 清理被修得更准 —— `@scope` 内以组合符开头的相对选择器不再被误删、浏览器解析不了的选择器整条不再参与级联（两者都被本配置的 `removeUnusedStyles = false` 关掉，见「三、发现与处置」1），剥离脚本时会一并移除 SVG 动画元素的 `onbegin` / `onend` / `onrepeat`（本配置 `blockScripts = false`，不触发），以及 infobar 涟漪动画不再重复播放。1.26.1 相对 1.26.0 只换了内置 core（1.6.5 → 1.6.7）与俄语翻译；core 侧值得知道的变化：字体面裁剪与空规则移除被修正得更彻底（两者都被本配置的 `removeUnusedFonts` / `removeUnusedStyles = false` 关掉，见「三、发现与处置」1）、归档写入顺序确定化（同一页面两次保存产出相同归档，便于按哈希判断页面是否变化）、自解压页在发现多于一个归档候选时拒绝解压。1.26.0 相对 1.24.0 的保真度变化（保存页不再能提交表单或设置 base URI，`javascript:` URI 在所有属性与命名空间中被净化；资源字节优先于声明的 content type；响应头完整转发且按大小写不敏感查找；页面文档不再受单资源大小上限约束）依旧包含在内；1.24.1–1.24.3 的修复（复合 `@font-face` 规则全部保留、iframe 内 SVG 文档内容保留、sandboxed `srcdoc` iframe 按渲染结果保存、`srcset` 保存失败时不留空属性对、BMP / GIF87a 扩展名识别修正）同理。zip.js 升至 2.15.0 后产出的归档与 1.24.0 逐字节不同 —— 本配置走自解压归档路径，这些归档侧变化都会实际生效。
 5. `loadDeferredContentMinZoomFactor`（1.25.0 新增，选项页暂无控件）：为「加载延迟内容时的页面缩放」设下限（有效区间 (0, 1]）。为避免长页面在抓取时被极度缩小、导致依赖布局的懒加载失效，已于 2026-09-23 设为 `0.5`（见「三、发现与处置」9）。
 6. **保存格式 = 自解压 ZIP (universal)**（2026-09-21 恢复）：`compressContent = true` + `selfExtractingArchive = true` + `extractDataFromPage = true`。`compressContent` 是**格式总开关**，修改它等于换格式：`false` = 纯自包含 HTML（资源内联为 `data:` URI）。要临时换格式，直接用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键；手工只改 `selfExtractingArchive` 不会生效（2026-09-02 的教训，见「三、发现与处置」2）。
 
-## 五、键语义补充（2026-09-23：待确证清单已清空）
+## 五、键语义补充（2026-09-23：待确证清单已清空；2026-09-28：补录 1.27.0 新增键）
 
 上一版挂起的 4 个键本轮已逐一到 `v1.26.4` 源码确证语义（1.26.5 的 `src/core/bg/config.js` 与 1.26.4 逐字节相同，语义与结论不变），清单清空。这 4 键在本配置**均为 `false`**，均未启用，不影响现有行为：
 
@@ -180,5 +190,10 @@
 - `insertEmbeddedScreenshotImage = false`：开启且 `compressContent = true` 时，在资源初始化前抓取整页截图并作为「嵌入图片」写进保存页（`src/core/content/content.js:267`）。选项页中勾选 `insertEmbeddedImage` 会联动勾上它；两者在 `compressContent = false` 时均禁用。
 - `moveStylesInHead = false`：开启时把 `<head>` 之外的 `<style>`（`body style` / `body ~ style`，且计算样式判为隐藏者）在抓取阶段标记（`core/helper.js:293`），收尾阶段移入 `<head>`（`core/index.js:1050`）；关闭时保持样式元素原位置。仅调整保存页内部结构，与资源保留无关。
 - `saveFilenameTemplateData = false`：开启时把一个含 `saveUrl` / `saveDate` / 文件名模板等字段的 JSON `<script data-single-file-options>` 写进保存页，供再次保存 / 编辑器复用（`core/index.js:698`）；若 `openEditor = true` 或文件名模板含 `{digest-sha-N}`，会被强制置为 `true`（`core/index.js:188`）。本配置 `openEditor = false` 且模板不含 digest，故保持 `false`，该 JSON 不会写入。
+
+1.27.0 新增 / 移除的键（2026-09-28 补录，均在 `v1.27.0` 源码确证）：
+
+- `imageQuality = 0.8`（1.27.0 新增）：用 `imageReductionFactor` 缩放图片后重新编码 JPEG / WebP 时的质量（0~1，默认 `0.8`；取 1 时 Chromium / Firefox 以无损 WebP 编码）。对 PNG 无效；`imageReductionFactor = 1` 时无效（`src/ui/bg/ui-options.js` 会禁用该输入框）。本配置 `imageReductionFactor = 1`，故当前为惰性键，按上游默认合入；若将来启用缩放，按 HFA 高保真取向应设为 `1`。选项页控件为数字输入框，取值经 `Math.min(Math.max(value, 0), 1)` 夹取，空值回落 `0.8`。
+- `compressCSS`（1.27.0 移除）：自 core 1.6.15 起已无效果（其作用的 UglifyCSS 已从 vendored 依赖移除），被 `imageQuality` 取代。选项名仍被扩展接受、旧设置不报错，但新导出不再包含该键。本配置原值 `false`（关闭），删除后行为不变。
 
 已由上游源码确证、不在此列的键：`maxAppendedDataLength`、`loadDeferredContentMinZoomFactor`、`readMaffMetadata`，以及 `compressContent` / `selfExtractingArchive` / `extractDataFromPage` / `preventAppendedData` / `disableCompression`（保存格式与归档路径语义）、`groupDuplicateImages` + `maxSizeDuplicateImages`（内联路径的去重门控与体积上限）。后续新增键再按同一流程补录。

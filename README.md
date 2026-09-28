@@ -28,7 +28,7 @@
 
 **不裁不压 —— 保留原始资源质量**
 
-- 压缩全部关闭（页面自身）：`compressHTML` / `compressCSS` 均为 `false`，保存页里的 HTML / CSS 保持原始可读格式
+- 压缩全部关闭（页面自身）：`compressHTML = false`，保存页里的 HTML 保持原始可读格式（`compressCSS` 已在 1.27.0 移除：自 core 1.6.15 起它已无效果）
 - 不屏蔽任何资源：`blockScripts` / `blockStylesheets` / `blockImages` 等均为 `false`
 - 默认不做清理裁剪：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` 均为 `false`
 - 单资源大小上限检查处于关闭状态（`maxResourceSizeEnabled = false`）
@@ -60,9 +60,9 @@
 
 ## 维护与同步
 
-本文件是 SingleFile 的**全量导出**格式：多数键（71 个关闭的布尔项、21 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
+本文件是 SingleFile 的**全量导出**格式：多数键（70 个关闭的布尔项、21 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.26.5（配置基线为 1.24.0 的真实导出；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名；1.26.1 只更新了内置 single-file-core 1.6.5 → 1.6.7，`DEFAULT_CONFIG` 与迁移逻辑未动；1.26.2 只把 core 由 1.6.7 升到 1.6.9，`src/core/bg/config.js` 与 1.26.1 逐字节相同；1.26.3 只把 core 由 1.6.9 升到 1.6.10，`src/core/bg/config.js` 与 1.26.2 仍逐字节相同；1.26.4 只把 core 由 1.6.10 升到 1.6.11，`src/core/bg/config.js` 与 1.26.3 仍逐字节相同（SHA-256 一直为 `D45E9547…`），148 键与上游 `DEFAULT_CONFIG` 完全一致，配置面零变化。1.26.2 的 core 三处改动（未使用样式清理、屏蔽脚本时的 SVG 事件处理器剥离、infobar 动画）挂在 HFA 已关闭的开关之后；1.26.3 的 core 改动集中在归档侧（按内容去重样式表、自生成图片改存文件）与已关闭的 `removeUnusedStyles` 清理精度，前者只改变归档内部组织方式、不产生新键，后者不可达；1.26.4 的 core 改动是嵌套链接修复的回归修正（链接套链接的页面保存失败，改为按正序复位祖先），在 DOM 修复路径无条件生效、不产生新键；1.26.5 只把 core 由 1.6.11 升到 1.6.14，`src/core/bg/config.js` 与 1.26.4 仍逐字节相同（SHA-256 一直为 `D45E9547…`），148 键与上游 `DEFAULT_CONFIG` 完全一致，配置面零变化，扩展侧只改了 Firefox「文件名冲突时询问」的下载分支与编辑器影子根修复、均不产生新键。版本同步本身都不需要改键。同轮另行发现并修复了 2026-09-02 起保存格式被静默切成 HTML 的问题，见 [docs/config-audit.md](docs/config-audit.md)）
+- **适用 SingleFile 版本**：1.27.0（配置基线为 1.24.0 的真实导出；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名；1.26.1 只更新了内置 single-file-core 1.6.5 → 1.6.7，`DEFAULT_CONFIG` 与迁移逻辑未动；1.26.2 只把 core 由 1.6.7 升到 1.6.9，`src/core/bg/config.js` 与 1.26.1 逐字节相同；1.26.3 只把 core 由 1.6.9 升到 1.6.10，`src/core/bg/config.js` 与 1.26.2 仍逐字节相同；1.26.4 只把 core 由 1.6.10 升到 1.6.11，`src/core/bg/config.js` 与 1.26.3 仍逐字节相同（SHA-256 一直为 `D45E9547…`），148 键与上游 `DEFAULT_CONFIG` 完全一致，配置面零变化。1.26.2 的 core 三处改动（未使用样式清理、屏蔽脚本时的 SVG 事件处理器剥离、infobar 动画）挂在 HFA 已关闭的开关之后；1.26.3 的 core 改动集中在归档侧（按内容去重样式表、自生成图片改存文件）与已关闭的 `removeUnusedStyles` 清理精度，前者只改变归档内部组织方式、不产生新键，后者不可达；1.26.4 的 core 改动是嵌套链接修复的回归修正（链接套链接的页面保存失败，改为按正序复位祖先），在 DOM 修复路径无条件生效、不产生新键；1.26.5 只把 core 由 1.6.11 升到 1.6.14，`src/core/bg/config.js` 与 1.26.4 仍逐字节相同（SHA-256 一直为 `D45E9547…`），148 键与上游 `DEFAULT_CONFIG` 完全一致，配置面零变化，扩展侧只改了 Firefox「文件名冲突时询问」的下载分支与编辑器影子根修复、均不产生新键（1.26.0~1.26.5 各轮版本同步都不需要改键）。1.27.0 起配置面有变：新增 `imageQuality`（按上游默认 `0.8`）、移除自 core 1.6.15 起即无效果的 `compressCSS`，键数仍为 148、与上游 `DEFAULT_CONFIG` 完全一致；同版把 core 由 1.6.14 升到 1.6.19，改动集中在影子根保真、非法嵌套与 `<model>` 资源嵌入、样式表抓取回退与确定性修复，均不新增键。同轮另行发现并修复了 2026-09-02 起保存格式被静默切成 HTML 的问题，见 [docs/config-audit.md](docs/config-audit.md)）
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - **保存格式**：自解压 ZIP（universal）—— `compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联 `data:` URI）；选项页的「格式」下拉会按下拉重写这三个键。2026-09-02 曾把它误当「压缩内容」关掉导致归档静默失效，2026-09-21 已恢复（详见 [docs/config-audit.md](docs/config-audit.md)）。
 - 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项。
