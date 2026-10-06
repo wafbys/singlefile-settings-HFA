@@ -1,11 +1,11 @@
 # HFA 配置审计报告
 
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.28.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 适用版本：SingleFile 1.28.1（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
 - 审计基准：commit `bbea736`（148 键）
-- 最近审计：2026-10-04（1.28.0 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
-- 当前状态：148 键，与上游 `v1.28.0` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.28.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对，并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
+- 最近审计：2026-10-06（1.28.1 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
+- 当前状态：148 键，与上游 `v1.28.1` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.28.1` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对（`v1.28.0` / `v1.28.1` 该文件逐字节相同），并以脚本复现扩展 `upgrade()` 的迁移逻辑做等价性验证；另对 core 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
@@ -13,6 +13,7 @@
 - **保存格式 = 自解压 ZIP（universal）**：`compressContent = true`（格式总开关）+ `selfExtractingArchive = true` + `extractDataFromPage = true`。2026-09-02 曾被误当「压缩内容」关掉、静默切成纯 HTML，2026-09-21 发现并恢复（见「三、发现与处置」1）。
 - **148 键全面复核（2026-09-28）**：28 个偏离上游默认值的键逐一确认与「保真优先」一致或无害，未发现相互矛盾 / 被旁路的配置；同轮修正 2 个削弱抓取完整度的键（见「三、发现与处置」3）。
 - **1.28.0 配置面零变化**：`src/core/bg/config.js` 与 1.27.0 逐字节相同（SHA-256 均为 `7C02D720…`），键集与取值均不变，本次版本同步**不改任何键**。
+- **1.28.1 配置面零变化**：`src/core/bg/config.js` 与 1.28.0 逐字节相同（全文 31253 字节比对一致），键集与取值均不变，本次版本同步**不改任何键**；同版内置 core 由 1.6.22 升到 1.6.24。
 - **版本核对表**（「配置面」指 `DEFAULT_CONFIG` 键集 / 默认值 / 改名表 / `upgrade()` 迁移是否变化；「无」表示该版只升级内置 core，**版本同步本身不需要改键**）：
 
 | 版本 | 发布 | 内置 core | 配置面 | 结论 |
@@ -27,6 +28,7 @@
 | 1.26.5 | 2026-09-24 | 1.6.11 → 1.6.14 | 无 | 同上 |
 | 1.27.0 | 2026-09-27 | 1.6.14 → 1.6.19 | 换键 2 处 | 移除失效 `compressCSS`、新增 `imageQuality`（HFA 取 `1`），仍 148 键 |
 | 1.28.0 | 2026-10-02 | 1.6.19 → 1.6.22 | 无 | `config.js` 与 1.27.0 逐字节相同 |
+| 1.28.1 | 2026-10-04 | 1.6.22 → 1.6.24 | 无 | `config.js` 与 1.28.0 逐字节相同 |
 
 > 逐版 core 改动中在 HFA 已启用路径上生效的部分汇总于「附录 B」；完整提交清单见对应 git 提交信息与上游发布说明。
 
@@ -37,7 +39,7 @@
 - 顶层：`maxParallelWorkers = 12`、`processInForeground = false`
 - 键类型分布：布尔 97（true 28 / false 69）、字符串 31（空 21 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 键序：与导出格式一致，按码位升序排列（已校验）
-- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.26.1 ~ 1.26.5 与 1.28.0 配置面零变化。键值丢失 0。
+- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 配置面零变化。键值丢失 0。
 - 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）
 
 ## 二、键分类
@@ -113,10 +115,10 @@
 
 ## 四、跟进建议
 
-1. README 已记录适用版本（2026-10-04 更新为 SingleFile 1.28.0）。
+1. README 已记录适用版本（2026-10-06 更新为 SingleFile 1.28.1）。
 2. README 已固化「刻意设置的键」清单，与导出默认值区分（见「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.28.0。
-4. 建议将**扩展本体**升级至 1.28.0（2026-10-02 发布）：配置面零变化，无需改键；同版内置 core 由 1.6.19 升到 1.6.22，core 侧在 HFA 生效路径上的收益见「附录 B」。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.28.1。
+4. 建议将**扩展本体**升级至 1.28.1（2026-10-04 发布）：配置面零变化（`config.js` 与 1.28.0 逐字节相同），无需改键；同版内置 core 由 1.6.22 升到 1.6.24，core 侧在 HFA 生效路径上的收益见「附录 B」——尤其是 Firefox + 自解压归档下 `<style>` 内 `@import` 样式表被解析为空导致丢字体的修复。
 5. `loadDeferredContentMinZoomFactor`（1.25.0 新增，选项页暂无控件）：加载延迟内容时的页面缩放下限，有效区间 (0, 1]；已于 2026-09-23 设为 `0.5`（见「三、发现与处置」2）。
 6. **保存格式 = 自解压 ZIP (universal)**：`compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联为 `data:` URI）；要临时换格式用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键，手工只改 `selfExtractingArchive` 不生效（见「三、发现与处置」1）。
 
@@ -159,3 +161,5 @@
 - **1.6.14**：infobar 闪烁改为独立覆盖层（纯观感，受 `animateInfobar = true` 影响）。
 - **1.6.15 ~ 1.6.19**：影子根 `delegatesFocus` / 手动槽位分配修复、`<model>` 资源嵌入、无预期类型资源不再发 `Accept: undefined`、`<link>` 样式表抓取失败时回退页面已加载规则（Firefox 跨源可读）、`referrerpolicy` 与跨源 referrer 传递、`data-single-file-stylesheet` 残留属性清理；另有 `imageReductionFactor` 缩放链路修复（本配置 `= 1`，不生效）。
 - **1.6.20 ~ 1.6.22**：归档读取补齐偏移 —— `processors/compression/compression.js` 的 `getContent()` 新增 `getPrependedDataLength()`，把从页面读到的 ZIP 数据按实际偏移补零对齐后再交给 zip.js，修自解压归档带前置数据时解压错位 / 校验失败；zip.js 升到 2.22.0。字体裁剪（`removeUnused*`）修复挂在已关闭开关之后，不可达。
+- **1.6.23**：自解压归档的前置补零更稳健（仅当中央目录位于预期位置时才补零，否则按原方式查找，覆盖内嵌 PDF 等场景）；zip.js 升到 2.23.0（修无前置字节读取时的偏移）。修复 `@scope` / `@starting-style` / `@keyframes` / `@page` 内 `url()` 未内嵌（本配置保留全部资源，**可达**）；脚本 `new FontFace(...)` 生成的字体族名按浏览器序列化写回、`document.fonts.delete()` 的字体不再保存、浏览器忽略的嵌套 `@font-face` 不再下载（本配置不屏蔽字体，**可达**）；移除 `<script>` / `<noscript>` / 资源提示 / 隐藏 `<input>` 时的元素位移修复（`:nth-child()` / `+` / `~` 等选择器不再错位）。字体裁剪相关修复（`removeUnusedFonts` / `removeAlternativeFonts` / `removeAlternativeMedias`，本配置全关）与 HTML minifier 相关修复（`compressHTML = false`）**不可达**。
+- **1.6.24**：Firefox 下自解压归档中由 `<style>` 元素 `@import` 的样式表被解析为空（以此加载 Google Fonts 等资源的页面丢字体）——自解压归档改为不用 `DOMParser` 解析页面；仅 Firefox 受影响，恰落在本配置的存档格式与目标浏览器组合上，**可达**。

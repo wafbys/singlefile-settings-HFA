@@ -64,7 +64,7 @@
 
 本文件是 SingleFile 的**全量导出**格式：多数键（69 个关闭的布尔项、21 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.28.0。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`），键数仍为 148、与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
+- **适用 SingleFile 版本**：1.28.1。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`），键数仍为 148、与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - **保存格式**：自解压 ZIP（universal）—— `compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联 `data:` URI）；选项页的「格式」下拉会按下拉重写这三个键。2026-09-02 曾把它误当「压缩内容」关掉导致归档静默失效，2026-09-21 已恢复（详见 [docs/config-audit.md](docs/config-audit.md)）。
 - 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项。
