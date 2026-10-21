@@ -1,11 +1,11 @@
 # HFA 配置审计报告
 
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.31.1（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
-- 审计基准：commit `a5d954a`（148 键，本次同步前）
-- 最近审计：2026-10-14（1.29.0 ~ 1.31.1 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
-- 当前状态：148 键，与上游 `v1.31.1` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.31.1` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对（`v1.29.0` ~ `v1.31.1` 逐次 diff：1.30.0 与 1.29.0 逐字节相同，1.31.0 仅重构 `getOptions` / `getProfileName`，1.31.1 与 1.31.0 逐字节相同），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.6.25 ~ 1.6.31 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
+- 适用版本：SingleFile 1.31.5（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 审计基准：commit `b9b93a0`（148 键，本次同步前）
+- 最近审计：2026-10-21（1.31.2 ~ 1.31.5 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
+- 当前状态：148 键，与上游 `v1.31.5` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.31.5` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对（`v1.29.0` ~ `v1.31.5` 逐次 diff：1.30.0 与 1.29.0 逐字节相同，1.31.0 仅重构 `getOptions` / `getProfileName`，1.31.1 与 1.31.0 逐字节相同，1.31.2 ~ 1.31.5 四版与 1.31.1 逐字节相同、SHA-256 均为 `2014FA28…`），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.6.25 ~ 1.6.40 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
@@ -16,6 +16,7 @@
 - **1.28.1 配置面零变化**：`src/core/bg/config.js` 与 1.28.0 逐字节相同（全文 31253 字节比对一致），键集与取值均不变，本次版本同步**不改任何键**；同版内置 core 由 1.6.22 升到 1.6.24。
 - **1.29.0 换键 2 处（仍 148 键）**：新增 `customStylesheet`（保存前注入自定义 CSS，上游默认 `""`，HFA 保持空值 = 不注入）；移除 `blockAlternativeImages`（`upgrade()` 无条件删除该键）。该键**并非失效键**：core 1.6.19 / 1.6.24 的 `srcset` 变体下载门控一直引用它，HFA 原值 `false` = 变体下载保留；1.28 起该语义并入 `removeAlternativeImages`（`false` = 下载并保留变体），HFA 行为不变，更正记录见「三、发现与处置」8。
 - **1.30.0 ~ 1.31.1 配置面零变化**：三者 `DEFAULT_CONFIG` 键集与取值均不变（1.30.0 与 1.29.0 的 `config.js` 逐字节相同；1.31.0 仅重构 `getOptions` / `getProfileName`，1.31.1 与其逐字节相同）；内置 core 依次升至 1.6.30 / 1.6.31 / 1.6.31，HFA 生效路径上的收益见「附录 B」。
+- **1.31.2 ~ 1.31.5 配置面零变化**：四版 `src/core/bg/config.js` 与 1.31.1 逐字节相同（31408 字节，SHA-256 均为 `2014FA28…`），`DEFAULT_CONFIG` 键集、默认值、改名表与 `upgrade()` 迁移全部不变，本次同步**不改任何键**；内置 core 依次升至 1.6.32 / 1.6.34 / 1.6.39 / 1.6.40，HFA 生效路径上的收益见「附录 B」（要点：每主机 6 个并发抓取、5xx 绕过缓存重试、隐藏帧跳过、Firefox `infinity` 媒体查询修复）。
 - **版本核对表**（「配置面」指 `DEFAULT_CONFIG` 键集 / 默认值 / 改名表 / `upgrade()` 迁移是否变化；「无」表示该版只升级内置 core，**版本同步本身不需要改键**）：
 
 | 版本 | 发布 | 内置 core | 配置面 | 结论 |
@@ -35,6 +36,10 @@
 | 1.30.0 | 2026-10-13 | 1.6.28 → 1.6.30 | 无 | `config.js` 与 1.29.0 逐字节相同；`maxParallelWorkers` / `processInForeground` 改为每批次重读 |
 | 1.31.0 | 2026-10-13 | 1.6.30 → 1.6.31 | 无 | `config.js` 仅 `getOptions` / `getProfileName` 重构，`DEFAULT_CONFIG` 不变 |
 | 1.31.1 | 2026-10-13 | 1.6.31 | 无 | `config.js` 与 1.31.0 逐字节相同 |
+| 1.31.2 | 2026-10-17 | 1.6.31 → 1.6.32 | 无 | `config.js` 与 1.31.1 逐字节相同（SHA-256 `2014FA28…`） |
+| 1.31.3 | 2026-10-18 | 1.6.32 → 1.6.34 | 无 | 同上 |
+| 1.31.4 | 2026-10-19 | 1.6.34 → 1.6.39 | 无 | 同上 |
+| 1.31.5 | 2026-10-19 | 1.6.39 → 1.6.40 | 无 | 同上；另修 Firefox 媒体查询 `infinity` 序列化 |
 
 > 逐版 core 改动中在 HFA 已启用路径上生效的部分汇总于「附录 B」；完整提交清单见对应 git 提交信息与上游发布说明。
 
@@ -45,7 +50,7 @@
 - 顶层：`maxParallelWorkers = 12`、`processInForeground = false`
 - 键类型分布：布尔 96（true 28 / false 68）、字符串 32（空 22 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 键序：与导出格式一致，按码位升序排列（已校验）
-- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.1 配置面零变化。键值丢失 0。
+- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.5 配置面零变化。键值丢失 0。
 - 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）
 
 ## 二、键分类
@@ -124,14 +129,14 @@
    1.29.0 的 `DEFAULT_CONFIG` 换键 2 处：新增 `customStylesheet`（字符串，默认 `""`）；移除 `blockAlternativeImages`，`upgrade()` 中新增一行 `delete profile.blockAlternativeImages`（无条件删除，不做取值迁移）。
    `customStylesheet` 语义（core 1.6.25 起，本配置取上游默认空值）：保存前把一段 CSS 作为**最后一份样式表**注入页面与各帧（core `helper.js` 的 `insertCustomStylesheet()`，`options.customStylesheet` 为真才注入），在隐藏元素检测前生效、随页面存档；典型用途是把页面用 CSS 折叠的内容展开（如聊天站把长回复钳制为几行）。HFA 保持 `""`：默认注入会改变页面表现，与「不裁不压」相冲突；需要时按站点临时填写，即「还原折叠内容」的预留杠杆。
    `blockAlternativeImages` 更正与行为：该键并非失效键 —— core 自 1.6.x 起在 `core/lib/processor-helper-common.js` 的 `processSrcset()` 中以 `!options.blockImages && !options.blockAlternativeImages` 门控 `srcset` 变体是否下载，HFA 原值 `false` = 变体下载并保留。1.28 起 core 把它弃用为 `removeAlternativeImages` 的别名（`DEPRECATED_OPTION_NAMES`），并把「是否下载变体」并入该可见键（`false` = 下载并保留、`true` = 只留当前显示图并移除变体）。HFA `removeAlternativeImages = false`，与旧行为等价 → **本轮实际行为变化为零**，只是键集对齐。
-   验证：按「删除 `blockAlternativeImages`、新增 `customStylesheet = ""`」模拟后，148 键与上游 `v1.31.1` 的 `DEFAULT_CONFIG` 键集完全一致；全量值比对（含 `filename-replacement.js` / `compression-constants.js` 引用常量的解析值）与 1.28.1（core 1.6.24）零差异；偏离默认值 28 项，均为既有刻意设置。
+   验证：按「删除 `blockAlternativeImages`、新增 `customStylesheet = ""`」模拟后，148 键与上游 `v1.29.0` ~ `v1.31.5` 的 `DEFAULT_CONFIG` 键集完全一致（四版 `config.js` 同字节，见「结论摘要 › 版本核对表」）；全量值比对（含 `filename-replacement.js` / `compression-constants.js` 引用常量的解析值）与 1.28.1（core 1.6.24）零差异；偏离默认值 28 项，均为既有刻意设置。
 
 ## 四、跟进建议
 
-1. README 已记录适用版本（2026-10-14 更新为 SingleFile 1.31.1）。
+1. README 已记录适用版本（2026-10-21 更新为 SingleFile 1.31.5）。
 2. README 已固化「刻意设置的键」清单，与导出默认值区分（见「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.31.1。
-4. 建议将**扩展本体**升级至 1.31.1（2026-10-13 发布）：1.29.0 ~ 1.31.1 配置面零变化，无需改键；内置 core 由 1.6.24 升到 1.6.31，core 侧在 HFA 生效路径上的收益见「附录 B」——错误状态图片与帧 HTML 保留、归档中失败资源不再产生空文件、帧配置下发安全修复（1.6.29 / 1.6.30）等。注意本次为四版连跳，升级后建议做一张回归快照（含 `<picture srcset>` 的页面）确认变体保留与解压正常。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.31.5。
+4. 建议将**扩展本体**升级至 1.31.5（2026-10-19 发布）：1.29.0 ~ 1.31.5 配置面零变化，无需改键；内置 core 由 1.6.24 升到 1.6.40，core 侧在 HFA 生效路径上的收益见「附录 B」——错误状态图片与帧 HTML 保留、归档中失败资源不再产生空文件、帧配置下发安全修复（1.6.29 / 1.6.30）、5xx 绕过缓存重试、隐藏帧跳过、Firefox `infinity` 媒体查询修复等。注意 1.29.0 ~ 1.31.5 为七版连跳，升级后建议做一张回归快照（含 `<picture srcset>` 与响应式断点的页面）确认变体保留与解压正常。
 5. `loadDeferredContentMinZoomFactor`（1.25.0 新增，选项页暂无控件）：加载延迟内容时的页面缩放下限，有效区间 (0, 1]；已于 2026-09-23 设为 `0.5`（见「三、发现与处置」2）。
 6. **保存格式 = 自解压 ZIP (universal)**：`compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联为 `data:` URI）；要临时换格式用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键，手工只改 `selfExtractingArchive` 不生效（见「三、发现与处置」1）。
 
@@ -168,7 +173,7 @@
 
 **1.24.0 升级核对（2026-09-04）**：与上版（137 键）逐键 diff，值变化 0、删除 0，rules 与顶层（`maxParallelWorkers` / `processInForeground`）一致，唯一差异为 GitHub 5 键随全量导出回潮 → 配置无需功能性调整。
 
-**1.29.0 迁移（2026-10-14 核对）**：`upgrade()` 新增 `delete profile.blockAlternativeImages`（无条件删除，无断言、无取值迁移）；core 侧 `DEPRECATED_OPTION_NAMES.blockAlternativeImages = "removeAlternativeImages"` 仅作兼容别名（旧键存在且新键未定义时才复制取值）。本配置状态已与目标一致（旧键删除、`removeAlternativeImages = false`），不触发迁移。1.30.0 ~ 1.31.1 无新增迁移逻辑。
+**1.29.0 迁移（2026-10-14 核对）**：`upgrade()` 新增 `delete profile.blockAlternativeImages`（无条件删除，无断言、无取值迁移）；core 侧 `DEPRECATED_OPTION_NAMES.blockAlternativeImages = "removeAlternativeImages"` 仅作兼容别名（旧键存在且新键未定义时才复制取值）。本配置状态已与目标一致（旧键删除、`removeAlternativeImages = false`），不触发迁移。1.30.0 ~ 1.31.5 无新增迁移逻辑。
 
 ## 附录 B：core 侧在 HFA 已启用路径上生效的行为变化（均不涉及配置键）
 
@@ -191,3 +196,11 @@
 - **1.6.29**：（1）捕获配置不再随 `postMessage` 发往子帧（子帧改经扩展 runtime 消息向持有会话的帧取配置），修复第三方 / 沙箱帧可读取完整 profile（含上传凭据）的问题 —— **可达**（安全）；（2）用户脚本事件不再暴露上传目标与凭据 —— 可达（本配置未用用户脚本）；（3）`<picture>` 的匹配 `<source>` 宽高保留到保存的 `<img>`，仅当 `removeAlternativeImages` 开启（移除变体时）—— 本配置 `false`，**不可达**；（4）adopted stylesheets 的序列化文本按单次捕获缓存 —— 可达（一致性）。
 - **1.6.30**：修复 1.6.29 在扩展宿主的帧配置下发（Firefox 后台页 / Chromium offscreen 的 core 副本会抢先应答 `singlefile.frameTree.getOptions` 并返回空配置，导致跨源 / 沙箱帧超时回退 `srcdoc`）—— **可达**，含跨源 frame 的页面保真依赖此修复。
 - **1.6.31**：（1）保存页中 infobar 宿主自带样式关闭 `::before` / `::after`，页面通配规则（如 `*::before { content: … }`）不再在宿主上画出杂散内容 —— 可达（观感）；（2）被屏蔽视频旁链接的定位修复挂在 `blockVideos` 之后 —— 本配置不屏蔽视频，**不可达**。
+- **1.6.32**：（1）`removeUnusedFonts` 不再丢用自定义属性（`--fa`）声明的图标字形 —— 本配置关闭该裁剪，**不可达**；（2）移除变体时保留 `srcset` 描述符 —— `removeAlternativeImages = false`，**不可达**；（3）自解压归档中 URL 无扩展名的 JPEG XL 命名为 `.jxl`、按 `image/jxl` 解出 —— **可达**。
+- **1.6.33 / 1.6.34**：视频 poster 快照失败不再中断整页保存（无 `options.doc` 的后台路径），1.6.34 补回「Save frame」路径的真实 poster —— 触发面是「屏蔽视频」与自动保存，本配置 `blockVideos = false`、`autoSave*` 全关，**不可达**。
+- **1.6.35**：加载失败的帧（`X-Frame-Options` 拦截、死链嵌入）2 s 而非 5 s 放弃，页面少等 3 s —— `removeFrames = false`，**可达**（纯提速，输出不变）；`:first-letter` 只在块容器上采集字体 —— 接在 `removeUnusedFonts` 之后，不可达。
+- **1.6.36**：（1）`removeUnusedStyles` 清理无人引用的自定义属性 —— 本配置关闭，**不可达**；（2）**每主机最多 6 个并发资源请求**（core 选项 `maxParallelRequestsPerHost`，非导出键，0 = 不限）—— **可达**，防单站限流 429，与顶层 `maxParallelWorkers = 12`（页面级并发）互不影响；（3）仍在加载的图片不再被当隐藏元素删掉 —— 该路径由 `removeHiddenElements` 触发，本配置 `false`，**不可达**。
+- **1.6.37**：5xx 资源绕过 `force-cache` 重试一次（此前故障期返回的 500 会在缓存有效期内回放给每次保存）—— **可达**。
+- **1.6.38**：无盒 / `display: none` / `visibility: hidden` 的帧不再进帧树，不截图、不等 2 s ack —— **可达**（纯提速，输出相同；`opacity: 0` 的帧仍捕获）。
+- **1.6.39**：`@font-face` 的 `src` 列表含解析失败项时保留其余有效源并嵌入（此前整条规则丢字体，如 liberation.fr 把逗号写成分号）—— **可达**；`removeUnusedFonts` 计入列表标记 / `text-transform` 绘制的字形 —— 关闭，不可达。
+- **1.6.40**：Firefox 把超上限媒体查询序列化成 `infinity`（`(max-width: infinity * 1px)`）导致整段规则失效 —— 改为最大有限长度，**可达**（Firefox + 页面脚本改写过样式表，如 styled-components 的开放式断点）。
