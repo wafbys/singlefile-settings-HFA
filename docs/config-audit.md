@@ -1,15 +1,15 @@
 # HFA 配置审计报告
 
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.31.5（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
-- 审计基准：commit `b9b93a0`（148 键，本次同步前）
-- 最近审计：2026-10-21（1.31.2 ~ 1.31.5 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
-- 当前状态：148 键，与上游 `v1.31.5` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.31.5` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（148 键）键级比对（`v1.29.0` ~ `v1.31.5` 逐次 diff：1.30.0 与 1.29.0 逐字节相同，1.31.0 仅重构 `getOptions` / `getProfileName`，1.31.1 与 1.31.0 逐字节相同，1.31.2 ~ 1.31.5 四版与 1.31.1 逐字节相同、SHA-256 均为 `2014FA28…`），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.6.25 ~ 1.6.40 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
+- 适用版本：SingleFile 1.33.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 审计基准：commit `5de58f1`（148 键，本次同步前）
+- 最近审计：2026-10-30（1.32.0 ~ 1.33.0 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
+- 当前状态：149 键，与上游 `v1.33.0` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，上游默认 `false`，HFA 保持关闭，见「三、发现与处置」9）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.33.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（149 键）键级比对（`v1.29.0` ~ `v1.33.0` 逐次 diff：1.30.0 与 1.29.0 逐字节相同，1.31.0 仅重构 `getOptions` / `getProfileName`，1.31.1 与 1.31.0 逐字节相同，1.31.2 ~ 1.31.5 四版与 1.31.1 逐字节相同、SHA-256 均为 `2014FA28…`，1.32.0 只新增 `removeUnusedGlyphs: false` 一行、SHA-256 `E4CF58FF…`，1.33.0 只把同步存储换成 `sync-storage.js` 并调整导入后的清理时机、`DEFAULT_CONFIG` 不变、SHA-256 `1754FB26…`），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.6.41 ~ 1.8.0 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
-- **结构健康**：JSON 语法有效；148 键与上游 `DEFAULT_CONFIG` 键集完全一致；无影响高保真目标的矛盾配置；无强制修改项。
+- **结构健康**：JSON 语法有效；149 键与上游 `DEFAULT_CONFIG` 键集完全一致；无影响高保真目标的矛盾配置；无强制修改项。
 - **保存格式 = 自解压 ZIP（universal）**：`compressContent = true`（格式总开关）+ `selfExtractingArchive = true` + `extractDataFromPage = true`。2026-09-02 曾被误当「压缩内容」关掉、静默切成纯 HTML，2026-09-21 发现并恢复（见「三、发现与处置」1）。
 - **148 键全面复核（2026-09-28）**：28 个偏离上游默认值的键逐一确认与「保真优先」一致或无害，未发现相互矛盾 / 被旁路的配置；同轮修正 2 个削弱抓取完整度的键（见「三、发现与处置」3）。
 - **1.28.0 配置面零变化**：`src/core/bg/config.js` 与 1.27.0 逐字节相同（SHA-256 均为 `7C02D720…`），键集与取值均不变，本次版本同步**不改任何键**。
@@ -17,6 +17,8 @@
 - **1.29.0 换键 2 处（仍 148 键）**：新增 `customStylesheet`（保存前注入自定义 CSS，上游默认 `""`，HFA 保持空值 = 不注入）；移除 `blockAlternativeImages`（`upgrade()` 无条件删除该键）。该键**并非失效键**：core 1.6.19 / 1.6.24 的 `srcset` 变体下载门控一直引用它，HFA 原值 `false` = 变体下载保留；1.28 起该语义并入 `removeAlternativeImages`（`false` = 下载并保留变体），HFA 行为不变，更正记录见「三、发现与处置」8。
 - **1.30.0 ~ 1.31.1 配置面零变化**：三者 `DEFAULT_CONFIG` 键集与取值均不变（1.30.0 与 1.29.0 的 `config.js` 逐字节相同；1.31.0 仅重构 `getOptions` / `getProfileName`，1.31.1 与其逐字节相同）；内置 core 依次升至 1.6.30 / 1.6.31 / 1.6.31，HFA 生效路径上的收益见「附录 B」。
 - **1.31.2 ~ 1.31.5 配置面零变化**：四版 `src/core/bg/config.js` 与 1.31.1 逐字节相同（31408 字节，SHA-256 均为 `2014FA28…`），`DEFAULT_CONFIG` 键集、默认值、改名表与 `upgrade()` 迁移全部不变，本次同步**不改任何键**；内置 core 依次升至 1.6.32 / 1.6.34 / 1.6.39 / 1.6.40，HFA 生效路径上的收益见「附录 B」（要点：每主机 6 个并发抓取、5xx 绕过缓存重试、隐藏帧跳过、Firefox `infinity` 媒体查询修复）。
+- **1.32.0 换键 1 处（148 → 149 键）**：新增 `removeUnusedGlyphs`（实验性「裁剪未使用字形」），上游默认 `false`；HFA 保持 `false` → **行为零变化**，只是键集对齐（见「三、发现与处置」9）。内置 core 由 1.6.40 升至 1.7.1；同版新增 `%titlecase` 文件名函数、文件名空白折叠与非 BMP 替换规则修复 —— 不改变 HFA 的模板与替换表，仅当页面标题本身含连续空格时影响文件名。
+- **1.33.0 配置面零变化**：`DEFAULT_CONFIG` 与 1.32.0 完全相同（SHA-256 `1754FB26…`），改动集中在同步存储（超过 8 KB 的 profile 分片读写）与「导入失败不再先删现有配置」；内置 core 升至 1.8.0。HFA 未启用同步，导入路径只会更安全，**不改任何键**。
 - **版本核对表**（「配置面」指 `DEFAULT_CONFIG` 键集 / 默认值 / 改名表 / `upgrade()` 迁移是否变化；「无」表示该版只升级内置 core，**版本同步本身不需要改键**）：
 
 | 版本 | 发布 | 内置 core | 配置面 | 结论 |
@@ -40,17 +42,19 @@
 | 1.31.3 | 2026-10-18 | 1.6.32 → 1.6.34 | 无 | 同上 |
 | 1.31.4 | 2026-10-19 | 1.6.34 → 1.6.39 | 无 | 同上 |
 | 1.31.5 | 2026-10-19 | 1.6.39 → 1.6.40 | 无 | 同上；另修 Firefox 媒体查询 `infinity` 序列化 |
+| 1.32.0 | 2026-10-27 | 1.6.40 → 1.7.1 | +1 键 | 新增 `removeUnusedGlyphs`（HFA 取默认 `false`），148 → 149 键 |
+| 1.33.0 | 2026-10-28 | 1.7.1 → 1.8.0 | 无 | `DEFAULT_CONFIG` 不变；同步存储分片 + 导入失败保护 |
 
 > 逐版 core 改动中在 HFA 已启用路径上生效的部分汇总于「附录 B」；完整提交清单见对应 git 提交信息与上游发布说明。
 
-## 一、结构总览（当前状态，148 键）
+## 一、结构总览（当前状态，149 键）
 
 - profile：仅 `__Default_Settings__`
 - 规则：1 条，`url = "*"` → `__Default_Settings__`；`autoSaveProfile = __Disabled_Settings__`（SingleFile 内置隐藏 profile，不出现在导出中，属正常）
 - 顶层：`maxParallelWorkers = 12`、`processInForeground = false`
-- 键类型分布：布尔 96（true 28 / false 68）、字符串 32（空 22 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
+- 键类型分布：布尔 97（true 28 / false 69）、字符串 32（空 22 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 键序：与导出格式一致，按码位升序排列（已校验）
-- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.5 配置面零变化。键值丢失 0。
+- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.32.0 新增 `removeUnusedGlyphs` → 149 键；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.5、1.33.0 配置面零变化。键值丢失 0。
 - 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）
 
 ## 二、键分类
@@ -59,7 +63,7 @@
 
 - 压缩关闭（页面自身）：`compressHTML = false`，保存页里的 HTML 保持可读格式。`compressCSS` 已于 1.27.0 从配置中移除（自 core 1.6.15 起即无效果）。注意 `compressContent` **不属于**这一类：它是保存格式总开关（见「归档 / 保存格式」）
 - 屏蔽关闭：`blockScripts` / `blockStylesheets` / `blockImages` / `blockFonts` / `blockVideos` / `blockAudios` / `blockMixedContent` 等均为 `false`
-- 清理关闭：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` / `removeAlternativeFonts` / `removeAlternativeImages` / `removeAlternativeMedias` / `removeNoScriptTags` / `removeSavedDate` 等均为 `false`
+- 清理关闭：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` / `removeUnusedGlyphs` / `removeAlternativeFonts` / `removeAlternativeImages` / `removeAlternativeMedias` / `removeNoScriptTags` / `removeSavedDate` 等均为 `false`
 - 响应式图片不裁不省：`removeAlternativeImages = false` —— 1.29.0 起该键还决定 `srcset` 变体是否下载（core 1.6.28）：`false` = 变体全部下载并连同 `media` / `sizes` 保留，存档在不同视口下仍响应式；`true` = 只请求当前显示图并移除变体。HFA 取 `false`，与 1.28.x 下 `blockAlternativeImages = false` 的行为一致（见「三、发现与处置」8）
 - 等待与超时：`loadDeferredContent = true`（`loadDeferredContentMaxIdleTime = 20000` ms，`loadDeferredContentDispatchScrollEvent = true`）；`networkTimeout = 0`（不设资源抓取超时，2026-09-28 由 `30000` 改回上游默认，见「三、发现与处置」3）；`loadDeferredContentMinZoomFactor = 0.5`（懒加载阶段缩放下限，2026-09-23 由上游默认 `0` 上调，见「三、发现与处置」2）
 - 单资源上限检查关闭：`maxResourceSizeEnabled = false`
@@ -121,9 +125,9 @@
 5. **GitHub 服务族：按全量导出原样保留**
    `saveToGitHub = false`、`githubToken` / `githubUser` 为空（功能关闭）；`githubBranch = "main"`、`githubRepository = "SingleFile-Archives"` 为默认填充。2026-09-02 曾删除 5 键，2026-09-04 复核证实它们是 **SingleFile 每次全量导出的固定成员**（删除后下次导出会自动写回），为消除 diff 噪音按导出原样保留；功能仍关闭，不影响高保真行为。
 
-6. **`maxAppendedDataLength` 语义（1.24.3 起）**：自解压归档 ZIP 数据之后允许追加的数据量预算；仅在 `compressContent = true` 且 `selfExtractingArchive = true`、`preventAppendedData = false` 时处于生效路径（2026-09-02 ~ 09-21 因 `compressContent` 被误关而不可达，恢复后重新生效）。上游 1.24.2 将默认预算由 65535 降至 16361（各 ZIP 读取器容忍尾部数据的回扫窗口差异极大，libarchive 仅 16383 字节）；1.24.3 才修好「导出配置里的该值仅影响自动保存、手动保存不生效」的透传缺失 —— **1.24.3 是首个让该键真正按配置生效的版本**。键值 `16361` 与上游默认一致；core 1.6.5 ~ 1.6.31 该常量一直为 16361（本轮解析 core 1.6.24 / 1.6.31 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH` 一致）。
+6. **`maxAppendedDataLength` 语义（1.24.3 起）**：自解压归档 ZIP 数据之后允许追加的数据量预算；仅在 `compressContent = true` 且 `selfExtractingArchive = true`、`preventAppendedData = false` 时处于生效路径（2026-09-02 ~ 09-21 因 `compressContent` 被误关而不可达，恢复后重新生效）。上游 1.24.2 将默认预算由 65535 降至 16361（各 ZIP 读取器容忍尾部数据的回扫窗口差异极大，libarchive 仅 16383 字节）；1.24.3 才修好「导出配置里的该值仅影响自动保存、手动保存不生效」的透传缺失 —— **1.24.3 是首个让该键真正按配置生效的版本**。键值 `16361` 与上游默认一致；core 1.6.5 ~ 1.8.0 该常量一直为 16361（本轮解析 core 1.6.24 / 1.6.31 / 1.8.0 的 `DEFAULT_MAX_APPENDED_DATA_LENGTH` 一致）。
 
-7. **大量默认关闭项**：68 个 `false` 布尔、22 个空字符串等均为 SingleFile 全量导出自带状态，非刻意配置，无需处理。
+7. **大量默认关闭项**：69 个 `false` 布尔、22 个空字符串等均为 SingleFile 全量导出自带状态，非刻意配置，无需处理。
 
 8. **键集更新：+`customStylesheet`、−`blockAlternativeImages`（2026-10-14，换键 2 处，仍 148 键）**
    1.29.0 的 `DEFAULT_CONFIG` 换键 2 处：新增 `customStylesheet`（字符串，默认 `""`）；移除 `blockAlternativeImages`，`upgrade()` 中新增一行 `delete profile.blockAlternativeImages`（无条件删除，不做取值迁移）。
@@ -131,16 +135,22 @@
    `blockAlternativeImages` 更正与行为：该键并非失效键 —— core 自 1.6.x 起在 `core/lib/processor-helper-common.js` 的 `processSrcset()` 中以 `!options.blockImages && !options.blockAlternativeImages` 门控 `srcset` 变体是否下载，HFA 原值 `false` = 变体下载并保留。1.28 起 core 把它弃用为 `removeAlternativeImages` 的别名（`DEPRECATED_OPTION_NAMES`），并把「是否下载变体」并入该可见键（`false` = 下载并保留、`true` = 只留当前显示图并移除变体）。HFA `removeAlternativeImages = false`，与旧行为等价 → **本轮实际行为变化为零**，只是键集对齐。
    验证：按「删除 `blockAlternativeImages`、新增 `customStylesheet = ""`」模拟后，148 键与上游 `v1.29.0` ~ `v1.31.5` 的 `DEFAULT_CONFIG` 键集完全一致（四版 `config.js` 同字节，见「结论摘要 › 版本核对表」）；全量值比对（含 `filename-replacement.js` / `compression-constants.js` 引用常量的解析值）与 1.28.1（core 1.6.24）零差异；偏离默认值 28 项，均为既有刻意设置。
 
+9. **键集更新：+`removeUnusedGlyphs`（2026-10-30，换键 1 处，148 → 149 键）**
+   1.32.0 的 `DEFAULT_CONFIG` 新增 `removeUnusedGlyphs`（布尔，默认 `false`），是选项页「字体」分区的实验性开关：把页面没有绘制的字形从内嵌 TrueType / WOFF / WOFF2 字体里裁掉。保留的字形覆盖页面文本、CSS 生成内容、列表标记与 `text-transform`，另加规范分解 / 组合、双向镜像与变体选择符；CFF / 可变字体、声明 `MATH` 表的字体、重写后体积不减的字体、浏览器加载失败的字体一律原样保留；WOFF2 需要 Brotli（`CompressionStream("brotli")`，Firefox 147+），没有就原样保留。
+   HFA 保持 `false`：字形裁剪与「不裁不压」冲突，且属实验性；该键关闭时行为与 1.31.5 完全一致 → **本轮实际行为变化为零**，只是键集对齐。
+   迁移：`upgrade()` 没有为该键加专门分支，但会把 `DEFAULT_CONFIG` 中缺失的键回填到每个 profile（`if (profile[key] === undefined) profile[key] = DEFAULT_CONFIG[key]`），所以旧的 148 键文件导入 1.32+ 也会自动补上 `false`；本文件手补该键只为维持「全量导出」口径。
+   验证：1.32.0 的 `config.js` 与 1.31.5 逐行 diff 只有这一行新增（SHA-256 `E4CF58FF…`）；1.33.0 的 `DEFAULT_CONFIG` 与 1.32.0 相同（SHA-256 `1754FB26…`），改动仅在同步存储与导入清理。加键后 149 键与上游 `v1.33.0` 键集完全一致，偏离默认值仍为 28 项（`acceptHeaders` 仅键序不同、内容逐字一致），无新增差异。
+
 ## 四、跟进建议
 
-1. README 已记录适用版本（2026-10-21 更新为 SingleFile 1.31.5）。
+1. README 已记录适用版本（2026-10-30 更新为 SingleFile 1.33.0）。
 2. README 已固化「刻意设置的键」清单，与导出默认值区分（见「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.31.5。
-4. 建议将**扩展本体**升级至 1.31.5（2026-10-19 发布）：1.29.0 ~ 1.31.5 配置面零变化，无需改键；内置 core 由 1.6.24 升到 1.6.40，core 侧在 HFA 生效路径上的收益见「附录 B」——错误状态图片与帧 HTML 保留、归档中失败资源不再产生空文件、帧配置下发安全修复（1.6.29 / 1.6.30）、5xx 绕过缓存重试、隐藏帧跳过、Firefox `infinity` 媒体查询修复等。注意 1.29.0 ~ 1.31.5 为七版连跳，升级后建议做一张回归快照（含 `<picture srcset>` 与响应式断点的页面）确认变体保留与解压正常。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.33.0。
+4. 建议将**扩展本体**升级至 1.33.0（2026-10-28 发布）：1.30.0 ~ 1.33.0 仅 1.32.0 换键 1 处（+`removeUnusedGlyphs`，已补），其余配置面零变化；内置 core 由 1.6.40 升到 1.8.0，core 侧在 HFA 生效路径上的收益见「附录 B」——**1.7.1 的 `url()` 编解码内存修复**（大 data URL 页面从超时 / 渲染器崩溃降到可完成）、1.7.0 非法嵌套页面文本保留与 styled XML 挂起修复、1.8.0 文件名模板实体二次解码。注意 1.31.5 → 1.33.0 是跨 1.32.0 的两版连跳，升级后建议做一张回归快照（含 `<picture srcset>`、响应式断点、长文 / 大 data URL 的页面）确认变体保留、解压正常、文件名干净。
 5. `loadDeferredContentMinZoomFactor`（1.25.0 新增，选项页暂无控件）：加载延迟内容时的页面缩放下限，有效区间 (0, 1]；已于 2026-09-23 设为 `0.5`（见「三、发现与处置」2）。
 6. **保存格式 = 自解压 ZIP (universal)**：`compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联为 `data:` URI）；要临时换格式用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键，手工只改 `selfExtractingArchive` 不生效（见「三、发现与处置」1）。
 
-## 五、键语义补充（2026-09-23：待确证清单已清空；2026-09-28：补录 1.27.0 新增键；2026-10-14：补录 1.29.0 换键）
+## 五、键语义补充（2026-09-23：待确证清单已清空；2026-09-28：补录 1.27.0 新增键；2026-10-14：补录 1.29.0 换键；2026-10-30：补录 1.32.0 新增键）
 
 上一版挂起的 4 个键已逐一到 `v1.26.4` 源码确证语义（1.26.5 的 `src/core/bg/config.js` 与 1.26.4 逐字节相同，语义与结论不变），清单清空。这 4 键在本配置**均为 `false`**，均未启用，不影响现有行为：
 
@@ -160,6 +170,10 @@
 - `blockAlternativeImages`（1.29.0 移除）：不是失效键 —— core 1.6.19 / 1.6.24 的 `core/lib/processor-helper-common.js` 的 `processSrcset()` 中以 `!options.blockImages && !options.blockAlternativeImages` 门控 `srcset` 变体是否下载；1.28 起弃用为 `removeAlternativeImages` 的迁移别名（core `helper.js` 的 `DEPRECATED_OPTION_NAMES`），扩展 `upgrade()` 无条件 `delete`。HFA 旧值 `false` = 变体下载保留。
 - `removeAlternativeImages`（语义扩展，1.29.0 / core 1.6.28）：除「是否移除变体」外，兼管「是否下载变体」；`false` = 下载并保留（连同 `media` / `sizes`），`true` = 只请求显示图并移除变体。
 
+1.32.0 新增键（2026-10-30 补录，在 `v1.33.0` 源码与 core `1.8.0` 源码确证）：
+
+- `removeUnusedGlyphs = false`（1.32.0 新增，HFA 取上游默认）：实验性的字形子集化 —— 打开后把页面没有绘制的字形从内嵌 TrueType / WOFF / WOFF2 字体中移除，保存体积在测过的站点上缩小 3% ~ 30%。保留集合由页面文本、CSS 生成内容、列表标记、`text-transform` 实际绘制的字符，加上规范分解 / 组合、双向镜像与变体选择符组成；以下情况字体原样保留：CFF 字体、可变字体、声明 `MATH` 表、重写后并不更小、浏览器加载失败。WOFF2 依赖 Brotli（`CompressionStream("brotli")`，Firefox 147+；Chrome 下 WOFF2 原样保留）。本配置 `removeUnusedGlyphs = false`，行为与 1.31.5 一致；该键与「不裁不压」冲突，且上游标注为实验性，故不启用。
+
 已由上游源码确证、不在此列的键：`maxAppendedDataLength`、`loadDeferredContentMinZoomFactor`、`readMaffMetadata`，以及 `compressContent` / `selfExtractingArchive` / `extractDataFromPage` / `preventAppendedData` / `disableCompression`（保存格式与归档路径语义）、`groupDuplicateImages` + `maxSizeDuplicateImages`（内联路径的去重门控与体积上限）。后续新增键再按同一流程补录。
 
 ## 附录 A：历史核对要点
@@ -173,7 +187,7 @@
 
 **1.24.0 升级核对（2026-09-04）**：与上版（137 键）逐键 diff，值变化 0、删除 0，rules 与顶层（`maxParallelWorkers` / `processInForeground`）一致，唯一差异为 GitHub 5 键随全量导出回潮 → 配置无需功能性调整。
 
-**1.29.0 迁移（2026-10-14 核对）**：`upgrade()` 新增 `delete profile.blockAlternativeImages`（无条件删除，无断言、无取值迁移）；core 侧 `DEPRECATED_OPTION_NAMES.blockAlternativeImages = "removeAlternativeImages"` 仅作兼容别名（旧键存在且新键未定义时才复制取值）。本配置状态已与目标一致（旧键删除、`removeAlternativeImages = false`），不触发迁移。1.30.0 ~ 1.31.5 无新增迁移逻辑。
+**1.29.0 迁移（2026-10-14 核对）**：`upgrade()` 新增 `delete profile.blockAlternativeImages`（无条件删除，无断言、无取值迁移）；core 侧 `DEPRECATED_OPTION_NAMES.blockAlternativeImages = "removeAlternativeImages"` 仅作兼容别名（旧键存在且新键未定义时才复制取值）。本配置状态已与目标一致（旧键删除、`removeAlternativeImages = false`），不触发迁移。1.30.0 ~ 1.33.0 无新增迁移逻辑（1.32.0 的新键由 `DEFAULT_CONFIG` 回填，1.33.0 只改同步存储与导入清理）。
 
 ## 附录 B：core 侧在 HFA 已启用路径上生效的行为变化（均不涉及配置键）
 
@@ -204,3 +218,7 @@
 - **1.6.38**：无盒 / `display: none` / `visibility: hidden` 的帧不再进帧树，不截图、不等 2 s ack —— **可达**（纯提速，输出相同；`opacity: 0` 的帧仍捕获）。
 - **1.6.39**：`@font-face` 的 `src` 列表含解析失败项时保留其余有效源并嵌入（此前整条规则丢字体，如 liberation.fr 把逗号写成分号）—— **可达**；`removeUnusedFonts` 计入列表标记 / `text-transform` 绘制的字形 —— 关闭，不可达。
 - **1.6.40**：Firefox 把超上限媒体查询序列化成 `infinity`（`(max-width: infinity * 1px)`）导致整段规则失效 —— 改为最大有限长度，**可达**（Firefox + 页面脚本改写过样式表，如 styled-components 的开放式断点）。
+- **1.6.41**：新增 `zipWorkerURI`（宿主自带 zip worker 的路径），worker 启动等待由 5 s 改为 2 s 后回退主线程 —— 扩展自带 `/lib/single-file-z-worker.js`，路径不变，**对 HFA 无感**。
+- **1.7.0**：（1）新增 `removeUnusedGlyphs`（默认关闭，见「五」）—— 本配置 `false`，**不可达**；（2）非法嵌套修复不再丢位移兄弟节点之间的文本 —— `<div>` 逐词套在 `<p>` 里的页面（lingualeo.com 一类）保存后词间空格不再丢失，**可达**；（3）styled XML 页面（根元素无 `dataset`）抓取挂起修复 —— **可达**；（4）`removeUnusedFonts` 在超长文本页上的 `RangeError: Invalid array length` 修复 —— 本配置关闭该裁剪，**不可达**；（5）文件名替换规则支持 BMP 以外字符、替换后空白折叠为单个空格 —— **可达**（替换表为默认表，匹配结果不变；仅当标题本身含连续空格时文件名变化）。
+- **1.7.1**：css-tree 的 `url()` 编解码改为整段复制，不再逐字符拼接 —— 内嵌大资源（`data:` URL）的样式表内存占用从约 25 倍降到几 KB 量级，8 MB 的 `url()` 由 213 MB 堆增长 / 1.1 s 降到 45 ms；实测把某页从 50 s 截止 + 渲染器崩溃降到 21 s 完成。**可达，且是本配置（自解压归档、资源全内联）最相关的一项**。
+- **1.8.0**：（1）文件名模板的页面文本变量（`{page-title}` 等）二次解码 HTML 字符引用，标题被站点双重转义时文件名不再残留 `&amp;` / `&#8217;` —— **可达**（本配置模板使用 `{page-title}`）；（2）`[Nch]` 按码点截断修复 —— 本配置模板未使用截断，**不可用**；（3）Woleet 存证哈希改按打包后的最终字节计算 —— 本配置未启用 Woleet，**不可达**。

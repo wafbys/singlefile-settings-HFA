@@ -30,7 +30,7 @@
 
 - 压缩全部关闭（页面自身）：`compressHTML = false`，保存页里的 HTML 保持原始可读格式（`compressCSS` 已在 1.27.0 移除：自 core 1.6.15 起它已无效果）
 - 不屏蔽任何资源：`blockScripts` / `blockStylesheets` / `blockImages` 等均为 `false`
-- 默认不做清理裁剪：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` 均为 `false`
+- 默认不做清理裁剪：`removeFrames` / `removeHiddenElements` / `removeUnusedStyles` / `removeUnusedFonts` / `removeUnusedGlyphs` 均为 `false`
 - 响应式图片不裁不省：`removeAlternativeImages = false` —— 1.29.0 起该键还决定 `srcset` 变体的下载：不勾选即把各分辨率变体全部下载，并连同 `media` / `sizes` 保留，存档在不同视口下仍保持响应式
 - 单资源大小上限检查处于关闭状态（`maxResourceSizeEnabled = false`）
 - 不做图片缩放（`imageReductionFactor = 1`）；若将来启用缩放，重编码质量取上限 `imageQuality = 1`（WEBP 无损），避免二次有损
@@ -67,9 +67,9 @@
 
 ## 维护与同步
 
-本文件是 SingleFile 的**全量导出**格式：多数键（68 个关闭的布尔项、22 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
+本文件是 SingleFile 的**全量导出**格式：多数键（69 个关闭的布尔项、22 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.31.5。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`）；1.29.0 换键 2 处（新增 `customStylesheet`（空值）、移除 `blockAlternativeImages`）；1.30.0 ~ 1.31.5 配置面零变化（内置 core 升至 1.6.40）。键数始终为 148、与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
+- **适用 SingleFile 版本**：1.33.0。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`）；1.29.0 换键 2 处（新增 `customStylesheet`（空值）、移除 `blockAlternativeImages`）；1.30.0 ~ 1.31.5 配置面零变化（内置 core 升至 1.6.40）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，HFA 取默认 `false`，148 → 149 键）；1.33.0 配置面零变化（内置 core 升至 1.8.0）。键数始终与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - **保存格式**：自解压 ZIP（universal）—— `compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联 `data:` URI）；选项页的「格式」下拉会按下拉重写这三个键。2026-09-02 曾把它误当「压缩内容」关掉导致归档静默失效，2026-09-21 已恢复（详见 [docs/config-audit.md](docs/config-audit.md)）。
 - 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项。

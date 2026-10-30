@@ -149,6 +149,7 @@
       "removeNoScriptTags": false,
       "removeSavedDate": false,
       "removeUnusedFonts": false,
+      "removeUnusedGlyphs": false,
       "removeUnusedStyles": false,
       "removedElementsSelector": "",
       "replaceBookmarkURL": true,
