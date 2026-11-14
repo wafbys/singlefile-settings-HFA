@@ -21,6 +21,7 @@
 3. 通过选项页的备份/恢复（Backup/Restore）功能**导入**本文件；导入前建议先导出一份当前配置留作备份。
 4. 导入后规则即对所有页面生效。点击扩展图标保存页面，产出文件名形如 `[HFA] 页面标题 (2026-09-02 15-30-00).html`。
 5. 产出的是**自解压归档**：单个 `.html` 文件，用浏览器打开时会由页面内脚本自动解出原页面（需要允许 JavaScript）；多数 ZIP 工具也能直接打开同一文件、取出其中的原始资源。
+6. Chrome / Edge 打开本地存档时若看不到 infobar，或需要保存 `file://` 页面，请在扩展详情页开启「允许访问文件网址」；Firefox 153+ 需在扩展权限中允许访问本地文件。1.34.0 起选项页会检测并提示该权限。
 
 > 选项页中的具体按钮名称随 SingleFile 版本略有差异，以实际界面为准。
 
@@ -49,10 +50,13 @@
 - 懒加载阶段给页面缩放设下限（`loadDeferredContentMinZoomFactor = 0.5`），避免长页面被极度缩小、导致依赖布局的懒加载不触发
 - 不设网络请求超时（`networkTimeout = 0`，上游默认）：单个资源的抓取不加截止时间，避免慢响应资源被判定失败后以原始外链形式留在存档里（`networkTimeout` 只约束「拿到响应」这一步，且上游默认就是 0）
 - 跨源请求补发页面的 `Referer`（`passReferrerOnError = true`）：对要求 Referer / 防盗链的资源提高抓取成功率（上游默认 `false`）
+- 图片请求的 `Accept` 头以 `image/jxl` 开头（1.36.0 上游默认）：优先取 JPEG XL，再回退 AVIF / WebP 等；Chrome 155+、Firefox 158+、Safari 17+ 可解码，Edge 155 暂不支持，跨浏览器回放时留意。
 
-**预留的还原杠杆（默认不启用）**
+**预留的还原 / 抓取杠杆（默认不启用）**
 
 - `customStylesheet = ""`（1.29.0 新增）：保存前向页面与各帧注入一段自定义 CSS，作为最后一份样式表生效、随页面存档。空值 = 不注入、无任何影响。若遇到页面用 CSS 折叠 / 裁掉正文（如聊天站把长回复钳制为几行），可在此填一段 CSS 把内容展开后再存档。
+- `embeddedScript = ""`（1.34.0 新增）：保存页末尾插入的 JavaScript，页面脚本被移除后仍保留，不写入各帧，保存过程中不执行。空值 = 不插入。与 `customStylesheet` 配合可恢复被脚本隐藏的交互（如标签页）。
+- `loadDeferredContentKeepEmulatedScreenSize = false`（1.36.0 新增）：懒加载阶段把 `innerHeight` / `screen.height` 维持为整页高度，直到保存完成；能保住虚拟列表滚出视口即卸载的内容（如 x.com 时间线），代价是按屏幕高度布局的元素（全屏封面等）会按模拟高度存档。HFA 取默认 `false`；需要时按站点开专用 profile，不要全局打开。
 
 **存档元信息**
 
@@ -67,9 +71,9 @@
 
 ## 维护与同步
 
-本文件是 SingleFile 的**全量导出**格式：多数键（69 个关闭的布尔项、22 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
+本文件是 SingleFile 的**全量导出**格式：多数键（70 个关闭的布尔项、23 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.33.0。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`）；1.29.0 换键 2 处（新增 `customStylesheet`（空值）、移除 `blockAlternativeImages`）；1.30.0 ~ 1.31.5 配置面零变化（内置 core 升至 1.6.40）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，HFA 取默认 `false`，148 → 149 键）；1.33.0 配置面零变化（内置 core 升至 1.8.0）。键数始终与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
+- **适用 SingleFile 版本**：1.37.0。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`）；1.29.0 换键 2 处（新增 `customStylesheet`（空值）、移除 `blockAlternativeImages`）；1.30.0 ~ 1.31.5 配置面零变化（内置 core 升至 1.6.40）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，HFA 取默认 `false`，148 → 149 键）；1.33.0 配置面零变化（内置 core 升至 1.8.0）；1.34.0 新增 `embeddedScript`（空值，不注入；149 → 150 键）；1.35.0 配置面零变化（后台启动竞态修复，core 1.9.1）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（取默认 `false`，150 → 151 键）、`acceptHeaders.image` 前置 `image/jxl`（core 1.10.1）；1.37.0 配置面零变化（`config.js` 与 1.36.0 逐字节相同；新增 `%switch` 模板函数，HFA 未使用；core 1.12.0）。键数始终与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - **保存格式**：自解压 ZIP（universal）—— `compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联 `data:` URI）；选项页的「格式」下拉会按下拉重写这三个键。2026-09-02 曾把它误当「压缩内容」关掉导致归档静默失效，2026-09-21 已恢复（详见 [docs/config-audit.md](docs/config-audit.md)）。
 - 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项。
