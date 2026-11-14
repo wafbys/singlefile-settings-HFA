@@ -19,7 +19,7 @@
 1. 安装 SingleFile（Chrome / Edge / Firefox）。
 2. 打开 SingleFile 的 Options（选项）页。
 3. 通过选项页的备份/恢复（Backup/Restore）功能**导入**本文件；导入前建议先导出一份当前配置留作备份。
-4. 导入后规则即对所有页面生效。点击扩展图标保存页面，产出文件名形如 `[HFA] 页面标题 (2026-09-02 15-30-00).html`。
+4. 导入后规则即对所有页面生效。点击扩展图标保存页面，产出文件名形如 `[HFA] 页面标题 (2026-11-14 11：07：17.235).u.zip.html`。时间取自 `{date-iso}` / `{time-iso}`，为 **UTC**；`:` 因 Windows 文件名限制由替换表写成全角 `：`；`.u.zip.html` 表示自解压 ZIP（universal）。
 5. 产出的是**自解压归档**：单个 `.html` 文件，用浏览器打开时会由页面内脚本自动解出原页面（需要允许 JavaScript）；多数 ZIP 工具也能直接打开同一文件、取出其中的原始资源。
 6. Chrome / Edge 打开本地存档时若看不到 infobar，或需要保存 `file://` 页面，请在扩展详情页开启「允许访问文件网址」；Firefox 153+ 需在扩展权限中允许访问本地文件。1.34.0 起选项页会检测并提示该权限。
 
@@ -68,6 +68,8 @@
 - 文件名模板：
   `[HFA] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}`
 - 以 `[HFA]` 前缀区分归档来源；页面无标题时回退为 `No title`；追加存档日期时间，避免同名覆盖。
+- `{date-iso}` / `{time-iso}` 使用 **UTC**，不是本地时间；`{filename-extension}` 在本配置下为 `.u.zip.html`（自解压 ZIP universal）。
+- Windows 文件名不允许半角 `:`，时间里的 `:` 会按替换表写成全角 `：`（如 `11：07：17.235`），属正常现象。
 
 ## 维护与同步
 
