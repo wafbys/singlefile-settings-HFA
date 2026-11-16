@@ -91,7 +91,7 @@
         "＞",
         "＼"
       ],
-      "filenameTemplate": "[HFA] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}",
+      "filenameTemplate": "[HFA][SF1.37.0] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}",
       "forceWebAuthFlow": false,
       "githubBranch": "main",
       "githubRepository": "SingleFile-Archives",

@@ -4,7 +4,7 @@
 - 适用版本：SingleFile 1.37.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
 - 审计基准：commit `34b6c05`（149 键，本次同步前）
 - 最近审计：2026-11-14（1.34.0 ~ 1.37.0 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
-- 当前状态：151 键，与上游 `v1.37.0` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.34.0 新增 `embeddedScript`（隐藏选项，上游默认 `""`，HFA 保持空值，见「三、发现与处置」10）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（上游默认 `false`，HFA 保持关闭，见「三、发现与处置」11）、`acceptHeaders.image` 前置 `image/jxl`（HFA 随上游更新）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，上游默认 `false`，HFA 保持关闭，见「三、发现与处置」9）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`，均见「三、发现与处置」
+- 当前状态：151 键，与上游 `v1.37.0` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.34.0 新增 `embeddedScript`（隐藏选项，上游默认 `""`，HFA 保持空值，见「三、发现与处置」10）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（上游默认 `false`，HFA 保持关闭，见「三、发现与处置」11）、`acceptHeaders.image` 前置 `image/jxl`（HFA 随上游更新）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，上游默认 `false`，HFA 保持关闭，见「三、发现与处置」9）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`、`filenameTemplate` 前缀 `[HFA][SF1.37.0]`，均见「三、发现与处置」
 - 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.37.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（151 键）键级比对（`v1.33.0` ~ `v1.37.0` 逐次 diff：1.34.0 只新增 `embeddedScript: ""`、SHA-256 `67540950…`，1.35.0 只重构升级等待与 `readProfileNames`、`DEFAULT_CONFIG` 不变、SHA-256 `5279BC09…`，1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize: false` 并把 `acceptHeaders.image` 改为 `image/jxl,image/avif,…`、SHA-256 `18DD523D…`，1.37.0 与 1.36.0 逐字节相同、SHA-256 相同），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.8.1 ~ 1.12.0 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
 
 ## 结论摘要
@@ -63,7 +63,7 @@
 - 键类型分布：布尔 98（true 28 / false 70）、字符串 33（空 23 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 键序：与导出格式一致，按码位升序排列（已校验）
 - 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.32.0 新增 `removeUnusedGlyphs` → 149 键；1.34.0 新增 `embeddedScript` → 150 键；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize` → 151 键；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.5、1.33.0、1.35.0、1.37.0 配置面零变化。键值丢失 0。
-- 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）
+- 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）；`filenameTemplate` 带 `[SF1.37.0]` 版本标记（见「三、发现与处置」12）
 - 新增键取上游默认：`embeddedScript = ""`、`loadDeferredContentKeepEmulatedScreenSize = false`；`acceptHeaders.image` 随上游改为以 `image/jxl` 开头。三者均不改变当前保存行为（见「三、发现与处置」10、11）
 
 ## 二、键分类
@@ -170,9 +170,16 @@
     迁移：`upgrade()` 无专门分支，靠 `DEFAULT_CONFIG` 回填新键；`acceptHeaders` 是对象值，旧 profile 中已有该对象，`upgrade()` 的 `profile[key] === undefined` 判断不会替换，故**旧配置不会自动获得 JXL 头**，需要手工改（本文件已改）。这一点与新增标量键不同，升级后重新导出时要留意。
     验证：1.36.0 的 `config.js` 与 1.35.0 的 diff 为「+1 键、image 默认值 1 行」；1.37.0 与 1.36.0 逐字节相同（SHA-256 均为 `18DD523D…`）。加键后 151 键与上游 `v1.37.0` 键集一致，偏离默认值仍为 28 项（新增键取默认、image 头取新默认），无新增差异。
 
+12. **文件名加入 SingleFile 版本标记（2026-11-16，改 1 键）**
+    需求：保存时能从文件名直接看出用的是哪个 SingleFile 版本。
+    核对：`v1.37.0` 的模板变量表（`lib/single-file.js` 中 `filenameTemplate` 的 getter 映射，与 `src/ui/pages/help.html` 的 Template variables 一节一致）**没有扩展版本变量**；`{profile-name}` 只取 profile 名，`{options-json}` / `{options-text}` 只含配置键值，均不含 `manifest.version`。
+    处置：`filenameTemplate` 改为 `[HFA][SF1.37.0] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}`。键集不变（仍 151 键），偏离默认值仍为 28 项（`filenameTemplate` 原本就在这 28 项内）。
+    限制：`[SF1.37.0]` 是静态文本，扩展保存时不会替换；升级扩展后必须同步改标记，否则文件名会显示旧版本。若需自动读取，只能等上游新增模板变量。
+    验证：`[` / `]` / `.` 不在 `filenameReplacedCharacters`（只含 `~ + ? % * : | " < > \` 与控制字符），不会被替换成 `_`；模板先求值、后做字符替换，方括号语法安全。示例：`[HFA][SF1.37.0] Example (2026-11-16 04：05：06.789).u.zip.html`。
+
 ## 四、跟进建议
 
-1. README 已记录适用版本（2026-11-14 更新为 SingleFile 1.37.0）。
+1. README 已记录适用版本（2026-11-14 更新为 SingleFile 1.37.0）；文件名模板同步带 `[SF1.37.0]`，升级时记得一起改（见「三、发现与处置」12）。
 2. README 已固化「刻意设置的键」清单，与导出默认值区分（见「高保真策略要点」）。
 3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.37.0。
 4. 建议将**扩展本体**升级至 1.37.0（2026-11-10 发布）：1.34.0 ~ 1.37.0 配置面只加 2 键、改 1 个默认值（已同步），其余为内置 core 1.9.0 → 1.12.0 的保真 / 健壮性修复。HFA 生效路径上主要是 1.8.1 文件名模板空格与缺失图片重复请求（纯提速）、1.9.1 HTML 序列化器处理指令 / CDATA、1.10.0 SVG sprite 片段与 frame sandbox、1.10.1 选区布局；1.12.0 的注记 / `%switch` / `removeLinkQueryStrings` 在 HFA 当前用法下不可达。升级后建议做一张回归快照（含 `<picture srcset>`、响应式断点、长文 / 大 data URL、含 SVG sprite 的页面）确认变体保留、解压正常、文件名干净。Chrome Web Store 版本可能滞后，以实际可升级版本为准；1.34.0 起若打开本地存档看不到 infobar，需在扩展详情页开启「允许访问文件网址」（Firefox 153+ 需允许访问本地文件）。
