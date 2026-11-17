@@ -19,7 +19,7 @@
 1. 安装 SingleFile（Chrome / Edge / Firefox）。
 2. 打开 SingleFile 的 Options（选项）页。
 3. 通过选项页的备份/恢复（Backup/Restore）功能**导入**本文件；导入前建议先导出一份当前配置留作备份。
-4. 导入后规则即对所有页面生效。点击扩展图标保存页面，产出文件名形如 `[HFA][SF1.37.0] 页面标题 (2026-11-14 11：07：17.235).u.zip.html`。`[SF1.37.0]` 标记保存时使用的 SingleFile 版本；时间取自 `{date-iso}` / `{time-iso}`，为 **UTC**；`:` 因 Windows 文件名限制由替换表写成全角 `：`；`.u.zip.html` 表示自解压 ZIP（universal）。
+4. 导入后规则即对所有页面生效。点击扩展图标保存页面，产出文件名形如 `[HFA][SF1.38.0] 页面标题 (2026-11-17 15：42：08.517).u.zip.html`。`[SF1.38.0]` 标记保存时使用的 SingleFile 版本；时间取自 `{date-iso}` / `{time-iso}`，为 **UTC**；`:` 因 Windows 文件名限制由替换表写成全角 `：`；`.u.zip.html` 表示自解压 ZIP（universal）。
 5. 产出的是**自解压归档**：单个 `.html` 文件，用浏览器打开时会由页面内脚本自动解出原页面（需要允许 JavaScript）；多数 ZIP 工具也能直接打开同一文件、取出其中的原始资源。
 6. Chrome / Edge 打开本地存档时若看不到 infobar，或需要保存 `file://` 页面，请在扩展详情页开启「允许访问文件网址」；Firefox 153+ 需在扩展权限中允许访问本地文件。1.34.0 起选项页会检测并提示该权限。
 
@@ -66,9 +66,9 @@
 **命名约定**
 
 - 文件名模板：
-  `[HFA][SF1.37.0] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}`
+  `[HFA][SF1.38.0] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}`
 - 以 `[HFA]` 前缀区分归档来源，紧随其后的 `[SF<版本>]` 记录保存时使用的 SingleFile 版本；页面无标题时回退为 `No title`；追加存档日期时间，避免同名覆盖。
-- `[SF1.37.0]` 是**静态标记**：SingleFile 1.37.0 的模板变量没有扩展版本（`{profile-name}`、`{options-json}` 等都不含版本），无法在保存时自动读取；升级扩展后必须同步修改该标记（见「维护与同步」）。
+- `[SF1.38.0]` 是**静态标记**：SingleFile 1.38.0 的模板变量没有扩展版本（`{profile-name}`、`{options-json}` 等都不含版本），无法在保存时自动读取；升级扩展后必须同步修改该标记（见「维护与同步」）。
 - `{date-iso}` / `{time-iso}` 使用 **UTC**，不是本地时间；`{filename-extension}` 在本配置下为 `.u.zip.html`（自解压 ZIP universal）。
 - Windows 文件名不允许半角 `:`，时间里的 `:` 会按替换表写成全角 `：`（如 `11：07：17.235`），属正常现象。
 
@@ -76,8 +76,8 @@
 
 本文件是 SingleFile 的**全量导出**格式：多数键（70 个关闭的布尔项、23 个空字符串等）是扩展导出自带的默认 / 关闭状态，并非刻意配置。刻意设置的键即上文「高保真策略要点」与「命名约定」所列；完整审计口径见 [docs/config-audit.md](docs/config-audit.md)。
 
-- **适用 SingleFile 版本**：1.37.0。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`）；1.29.0 换键 2 处（新增 `customStylesheet`（空值）、移除 `blockAlternativeImages`）；1.30.0 ~ 1.31.5 配置面零变化（内置 core 升至 1.6.40）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，HFA 取默认 `false`，148 → 149 键）；1.33.0 配置面零变化（内置 core 升至 1.8.0）；1.34.0 新增 `embeddedScript`（空值，不注入；149 → 150 键）；1.35.0 配置面零变化（后台启动竞态修复，core 1.9.1）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（取默认 `false`，150 → 151 键）、`acceptHeaders.image` 前置 `image/jxl`（core 1.10.1）；1.37.0 配置面零变化（`config.js` 与 1.36.0 逐字节相同；新增 `%switch` 模板函数，HFA 未使用；core 1.12.0）。键数始终与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
+- **适用 SingleFile 版本**：1.38.0。配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照；1.24.0 → 1.26.0 逐键核对后合入上游新增键与 `loadDeferredContent*` 改名（143 → 148 键）；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1 只升级内置 core，配置面零变化；1.27.0 换键 2 处（移除失效的 `compressCSS`、新增 `imageQuality`，HFA 刻意取 `1`）；1.29.0 换键 2 处（新增 `customStylesheet`（空值）、移除 `blockAlternativeImages`）；1.30.0 ~ 1.31.5 配置面零变化（内置 core 升至 1.6.40）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，HFA 取默认 `false`，148 → 149 键）；1.33.0 配置面零变化（内置 core 升至 1.8.0）；1.34.0 新增 `embeddedScript`（空值，不注入；149 → 150 键）；1.35.0 配置面零变化（后台启动竞态修复，core 1.9.1）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（取默认 `false`，150 → 151 键）、`acceptHeaders.image` 前置 `image/jxl`（core 1.10.1）；1.37.0 配置面零变化（`config.js` 与 1.36.0 逐字节相同；新增 `%switch` 模板函数，HFA 未使用；core 1.12.0）；1.38.0 配置面零变化（`config.js` 与 1.37.0 逐字节相同；内置 core 升至 1.14.1，懒加载支持内层滚动容器、外链 SVG `<use>` 内联等保真修复）。键数始终与上游 `DEFAULT_CONFIG` 完全一致。逐版核对表、core 可达性分析与行为变化见 [docs/config-audit.md](docs/config-audit.md)。
 - 每次改动前先在 SingleFile 中导出现状留底，避免调坏配置后无法回退。
 - **保存格式**：自解压 ZIP（universal）—— `compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联 `data:` URI）；选项页的「格式」下拉会按下拉重写这三个键。2026-09-02 曾把它误当「压缩内容」关掉导致归档静默失效，2026-09-21 已恢复（详见 [docs/config-audit.md](docs/config-audit.md)）。
-- 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项；同时把 `filenameTemplate` 中的 `[SF1.37.0]` 改成实际版本。扩展自动更新但配置未重新导入时，文件名里的版本会滞后于实际保存版本。
+- 升级 SingleFile 后重新导出配置时，先与旧文件 diff，再决定合入哪些新键 / 迁移项；同时把 `filenameTemplate` 中的 `[SF1.38.0]` 改成实际版本。扩展自动更新但配置未重新导入时，文件名里的版本会滞后于实际保存版本。
 - 每个改动配一条说明动机的 git 提交（参见提交历史），便于回溯高保真策略的演进。

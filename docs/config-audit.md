@@ -1,11 +1,11 @@
 # HFA 配置审计报告
 
 - 审计对象：`singlefile-settings-HFA.json`
-- 适用版本：SingleFile 1.37.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
-- 审计基准：commit `34b6c05`（149 键，本次同步前）
-- 最近审计：2026-11-14（1.34.0 ~ 1.37.0 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
-- 当前状态：151 键，与上游 `v1.37.0` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.34.0 新增 `embeddedScript`（隐藏选项，上游默认 `""`，HFA 保持空值，见「三、发现与处置」10）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（上游默认 `false`，HFA 保持关闭，见「三、发现与处置」11）、`acceptHeaders.image` 前置 `image/jxl`（HFA 随上游更新）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，上游默认 `false`，HFA 保持关闭，见「三、发现与处置」9）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`、`filenameTemplate` 前缀 `[HFA][SF1.37.0]`，均见「三、发现与处置」
-- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.37.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（151 键）键级比对（`v1.33.0` ~ `v1.37.0` 逐次 diff：1.34.0 只新增 `embeddedScript: ""`、SHA-256 `67540950…`，1.35.0 只重构升级等待与 `readProfileNames`、`DEFAULT_CONFIG` 不变、SHA-256 `5279BC09…`，1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize: false` 并把 `acceptHeaders.image` 改为 `image/jxl,image/avif,…`、SHA-256 `18DD523D…`，1.37.0 与 1.36.0 逐字节相同、SHA-256 相同），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.8.1 ~ 1.12.0 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
+- 适用版本：SingleFile 1.38.0（配置基线为 2026-09-04 由用户重新导出的 1.24.0 快照）
+- 审计基准：commit `d31a260`（151 键，本次同步前）
+- 最近审计：2026-11-17（1.38.0 上游核对）；此前各版核对见「结论摘要 › 版本核对表」与「附录 A」
+- 当前状态：151 键，与上游 `v1.38.0` 的 `DEFAULT_CONFIG` **键集完全一致**（无缺失、无多余，键序按码位升序）；1.38.0 配置面零变化（`config.js` 与 1.37.0 逐字节相同）；1.34.0 新增 `embeddedScript`（隐藏选项，上游默认 `""`，HFA 保持空值，见「三、发现与处置」10）；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize`（上游默认 `false`，HFA 保持关闭，见「三、发现与处置」11）、`acceptHeaders.image` 前置 `image/jxl`（HFA 随上游更新）；1.32.0 新增 `removeUnusedGlyphs`（实验性字形裁剪，上游默认 `false`，HFA 保持关闭，见「三、发现与处置」9）；1.29.0 换键 2 处（+`customStylesheet`（空值）、−`blockAlternativeImages`，见「三、发现与处置」8）；关键值调整：`imageQuality = 1`、`networkTimeout = 0`、`passReferrerOnError = true`、`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`、`filenameTemplate` 前缀 `[HFA][SF1.38.0]`，均见「三、发现与处置」
+- 方法：静态审计 + 与 1.24.0 真实导出的键级 diff + 与上游 `v1.38.0` 源码 `src/core/bg/config.js` 的 `DEFAULT_CONFIG`（151 键）键级比对（`v1.33.0` ~ `v1.38.0` 逐次 diff：1.34.0 只新增 `embeddedScript: ""`、SHA-256 `67540950…`，1.35.0 只重构升级等待与 `readProfileNames`、`DEFAULT_CONFIG` 不变、SHA-256 `5279BC09…`，1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize: false` 并把 `acceptHeaders.image` 改为 `image/jxl,image/avif,…`、SHA-256 `18DD523D…`，1.37.0 与 1.36.0 逐字节相同，1.38.0 与 1.37.0 逐字节相同、SHA-256 均为 `18DD523D…`），并以脚本复现扩展 `upgrade()` 的迁移逻辑、解析常量（`filename-replacement.js`、`compression-constants.js`）后做全量值比对；另对 core 1.8.1 ~ 1.14.1 改动逐条核对可达性 —— JSON 结构、内部一致性、字段语义归类。源码无法确证的语义仍标注为推断
 
 ## 结论摘要
 
@@ -23,6 +23,7 @@
 - **1.35.0 配置面零变化**：`DEFAULT_CONFIG` 不变（SHA-256 `5279BC09…`），改动为 `upgrade()` 等待 `pendingUpgradePromise`、`readProfileNames` 拆分；内置 core 1.9.0 → 1.9.1。
 - **1.36.0 换键 1 处 + 默认值 1 处（150 → 151 键）**：新增 `loadDeferredContentKeepEmulatedScreenSize`（默认 `false`，懒加载期间保持模拟屏幕高度到保存完成，能抓全虚拟列表，代价是全屏高度元素按模拟高度存档）；`acceptHeaders.image` 前置 `image/jxl`（Chrome 155+ / Firefox 158+ / Safari 17+ 可解码，Edge 155 仍不支持）。HFA 取默认 `false`，图片 `Accept` 头随上游更新（见「三、发现与处置」11）。内置 core 1.9.1 → 1.10.1。
 - **1.37.0 配置面零变化**：`src/core/bg/config.js` 与 1.36.0 逐字节相同（SHA-256 均为 `18DD523D…`）；新增 `%switch` 模板函数、注记脚本改由 core 构建，`removeLinkQueryStrings` / `selectedElementsSelector` 等新 core 选项未进入扩展 `DEFAULT_CONFIG`；内置 core 1.10.1 → 1.12.0。HFA 模板未用 `%switch`，**不改任何键**。
+- **1.38.0 配置面零变化**：`src/core/bg/config.js` 与 1.37.0 逐字节相同（SHA-256 均为 `18DD523D…`，31811 字节）；扩展侧只改编辑器锚点点击、版本号与依赖，内置 core 1.12.0 → 1.14.1。HFA 生效路径上新增两项保真修复：懒加载在「文档不高于视口、滚动的是内层容器」的页面不再只存首屏；外链 SVG `<use>` 整份文件改为内联 `#id` 引用（此前写成不渲染的 data URI）。`removeUnusedStyles` 仍为 `false`，core 1.14.0 的 shadow root 样式裁剪与空 `:is()` / `:where()` 崩溃修复**不可达**。**本轮只改文件名版本标记，键集与其余键值不变**。
 - **版本核对表**（「配置面」指 `DEFAULT_CONFIG` 键集 / 默认值 / 改名表 / `upgrade()` 迁移是否变化；「无」表示该版只升级内置 core，**版本同步本身不需要改键**）：
 
 | 版本 | 发布 | 内置 core | 配置面 | 结论 |
@@ -52,6 +53,7 @@
 | 1.35.0 | 2026-11-04 | 1.9.0 → 1.9.1 | 无 | `DEFAULT_CONFIG` 不变；`upgrade()` 等待迁移完成 |
 | 1.36.0 | 2026-11-06 | 1.9.1 → 1.10.1 | +1 键 + 1 默认值 | 新增 `loadDeferredContentKeepEmulatedScreenSize = false`；`acceptHeaders.image` 前置 `image/jxl` |
 | 1.37.0 | 2026-11-10 | 1.10.1 → 1.12.0 | 无 | `config.js` 与 1.36.0 相同；新增 `%switch` 模板函数（HFA 未用） |
+| 1.38.0 | 2026-11-17 | 1.12.0 → 1.14.1 | 无 | `config.js` 与 1.37.0 逐字节相同；懒加载支持内层滚动容器、外链 SVG `<use>` 内联 |
 
 > 逐版 core 改动中在 HFA 已启用路径上生效的部分汇总于「附录 B」；完整提交清单见对应 git 提交信息与上游发布说明。
 
@@ -62,8 +64,8 @@
 - 顶层：`maxParallelWorkers = 12`、`processInForeground = false`
 - 键类型分布：布尔 98（true 28 / false 70）、字符串 33（空 23 / 非空 10）、数字 14、数组 4、嵌套对象 1（`acceptHeaders`）、null 1（`customShortcut`）
 - 键序：与导出格式一致，按码位升序排列（已校验）
-- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.32.0 新增 `removeUnusedGlyphs` → 149 键；1.34.0 新增 `embeddedScript` → 150 键；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize` → 151 键；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.5、1.33.0、1.35.0、1.37.0 配置面零变化。键值丢失 0。
-- 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）；`filenameTemplate` 带 `[SF1.37.0]` 版本标记（见「三、发现与处置」12）
+- 键集演进：143 键（1.24.3）→ 1.26.0 合入改名与新增到 148 键；1.27.0 换键 2 处、数量不变；1.29.0 换键 2 处（+`customStylesheet`、−`blockAlternativeImages`）、数量不变；1.32.0 新增 `removeUnusedGlyphs` → 149 键；1.34.0 新增 `embeddedScript` → 150 键；1.36.0 新增 `loadDeferredContentKeepEmulatedScreenSize` → 151 键；1.26.1 ~ 1.26.5 与 1.28.0 ~ 1.28.1、1.30.0 ~ 1.31.5、1.33.0、1.35.0、1.37.0、1.38.0 配置面零变化。键值丢失 0。
+- 当前刻意调整的关键值（详见「三」）：`compressContent` / `selfExtractingArchive` / `extractDataFromPage = true`（自解压归档）；`networkTimeout = 0`、`passReferrerOnError = true`（抓取完整度）；`loadDeferredContentMinZoomFactor = 0.5`、`loadDeferredContentMaxIdleTime = 20000`（懒加载抓全）；`imageQuality = 1`（将来启用缩放时的保真上限）；`filenameTemplate` 带 `[SF1.38.0]` 版本标记（见「三、发现与处置」12）
 - 新增键取上游默认：`embeddedScript = ""`、`loadDeferredContentKeepEmulatedScreenSize = false`；`acceptHeaders.image` 随上游改为以 `image/jxl` 开头。三者均不改变当前保存行为（见「三、发现与处置」10、11）
 
 ## 二、键分类
@@ -168,21 +170,21 @@
     HFA 保持 `false`：全局开启会改变所有页面的屏幕高度语义，与「原样保留页面表现」冲突；需要时按站点开专用 profile（在 `rules` 里为该站点指定 profile），不要改默认 profile。
     `acceptHeaders.image`：1.36.0 起上游默认以 `image/jxl` 开头（`image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8`）。Chrome 155+、Firefox 158+、Safari 17+（仅静态图）可解码；Edge 155 不支持 JPEG XL，若存档主要在 Edge 中回放，JXL 图片会显示为破图，可把该头改回不含 `image/jxl` 的旧默认。HFA 未自定义 Accept 头，本轮随上游更新。
     迁移：`upgrade()` 无专门分支，靠 `DEFAULT_CONFIG` 回填新键；`acceptHeaders` 是对象值，旧 profile 中已有该对象，`upgrade()` 的 `profile[key] === undefined` 判断不会替换，故**旧配置不会自动获得 JXL 头**，需要手工改（本文件已改）。这一点与新增标量键不同，升级后重新导出时要留意。
-    验证：1.36.0 的 `config.js` 与 1.35.0 的 diff 为「+1 键、image 默认值 1 行」；1.37.0 与 1.36.0 逐字节相同（SHA-256 均为 `18DD523D…`）。加键后 151 键与上游 `v1.37.0` 键集一致，偏离默认值仍为 28 项（新增键取默认、image 头取新默认），无新增差异。
+    验证：1.36.0 的 `config.js` 与 1.35.0 的 diff 为「+1 键、image 默认值 1 行」；1.37.0 与 1.36.0 逐字节相同（SHA-256 均为 `18DD523D…`）。加键后 151 键与上游 `v1.38.0` 键集一致，偏离默认值仍为 28 项（新增键取默认、image 头取新默认），无新增差异。
 
-12. **文件名加入 SingleFile 版本标记（2026-11-16，改 1 键）**
+12. **文件名加入 SingleFile 版本标记（2026-11-16 加入，2026-11-17 升至 `[SF1.38.0]`，改 1 键）**
     需求：保存时能从文件名直接看出用的是哪个 SingleFile 版本。
-    核对：`v1.37.0` 的模板变量表（`lib/single-file.js` 中 `filenameTemplate` 的 getter 映射，与 `src/ui/pages/help.html` 的 Template variables 一节一致）**没有扩展版本变量**；`{profile-name}` 只取 profile 名，`{options-json}` / `{options-text}` 只含配置键值，均不含 `manifest.version`。
-    处置：`filenameTemplate` 改为 `[HFA][SF1.37.0] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}`。键集不变（仍 151 键），偏离默认值仍为 28 项（`filenameTemplate` 原本就在这 28 项内）。
-    限制：`[SF1.37.0]` 是静态文本，扩展保存时不会替换；升级扩展后必须同步改标记，否则文件名会显示旧版本。若需自动读取，只能等上游新增模板变量。
-    验证：`[` / `]` / `.` 不在 `filenameReplacedCharacters`（只含 `~ + ? % * : | " < > \` 与控制字符），不会被替换成 `_`；模板先求值、后做字符替换，方括号语法安全。示例：`[HFA][SF1.37.0] Example (2026-11-16 04：05：06.789).u.zip.html`。
+    核对：`v1.38.0` 的模板变量表（`lib/single-file.js` 中 `filenameTemplate` 的 getter 映射，与 `src/ui/pages/help.html` 的 Template variables 一节一致）**没有扩展版本变量**；`{profile-name}` 只取 profile 名，`{options-json}` / `{options-text}` 只含配置键值，均不含 `manifest.version`。
+    处置：`filenameTemplate` 改为 `[HFA][SF1.38.0] %if-empty<{page-title}|No title> ({date-iso} {time-iso}).{filename-extension}`。键集不变（仍 151 键），偏离默认值仍为 28 项（`filenameTemplate` 原本就在这 28 项内）。
+    限制：`[SF1.38.0]` 是静态文本，扩展保存时不会替换；升级扩展后必须同步改标记，否则文件名会显示旧版本。若需自动读取，只能等上游新增模板变量。
+    验证：`[` / `]` / `.` 不在 `filenameReplacedCharacters`（只含 `~ + ? % * : | " < > \` 与控制字符），不会被替换成 `_`；模板先求值、后做字符替换，方括号语法安全。示例：`[HFA][SF1.38.0] Example (2026-11-17 15：42：08.517).u.zip.html`。
 
 ## 四、跟进建议
 
-1. README 已记录适用版本（2026-11-14 更新为 SingleFile 1.37.0）；文件名模板同步带 `[SF1.37.0]`，升级时记得一起改（见「三、发现与处置」12）。
+1. README 已记录适用版本（2026-11-17 更新为 SingleFile 1.38.0）；文件名模板同步带 `[SF1.38.0]`，升级时记得一起改（见「三、发现与处置」12）。
 2. README 已固化「刻意设置的键」清单，与导出默认值区分（见「高保真策略要点」）。
-3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.37.0。
-4. 建议将**扩展本体**升级至 1.37.0（2026-11-10 发布）：1.34.0 ~ 1.37.0 配置面只加 2 键、改 1 个默认值（已同步），其余为内置 core 1.9.0 → 1.12.0 的保真 / 健壮性修复。HFA 生效路径上主要是 1.8.1 文件名模板空格与缺失图片重复请求（纯提速）、1.9.1 HTML 序列化器处理指令 / CDATA、1.10.0 SVG sprite 片段与 frame sandbox、1.10.1 选区布局；1.12.0 的注记 / `%switch` / `removeLinkQueryStrings` 在 HFA 当前用法下不可达。升级后建议做一张回归快照（含 `<picture srcset>`、响应式断点、长文 / 大 data URL、含 SVG sprite 的页面）确认变体保留、解压正常、文件名干净。Chrome Web Store 版本可能滞后，以实际可升级版本为准；1.34.0 起若打开本地存档看不到 infobar，需在扩展详情页开启「允许访问文件网址」（Firefox 153+ 需允许访问本地文件）。
+3. SingleFile 升级后重新导出配置时，先与旧文件 diff，再合入新键 / 迁移项；注意**改名 / 删除 / 新增**三类变更，并对关键键确认可达性（见「三、发现与处置」4）。历次核对已覆盖 1.24.0 ~ 1.38.0。
+4. 建议将**扩展本体**升级至 1.38.0（2026-11-17 发布）：1.38.0 配置面零变化，内置 core 1.12.0 → 1.14.1。HFA 生效路径上是懒加载在内层滚动容器页面不再只存首屏、外链 SVG `<use>` 内联修复；`removeUnusedStyles` 关闭，1.14.0 的 shadow root 样式裁剪与 1.13.0 的空 `:is()` / `:where()` 崩溃修复不可达；1.14.1 选区 slot 修复仅手动保存选区时可达。升级后建议做一张回归快照（含 `<picture srcset>`、响应式断点、长文 / 大 data URL、含 SVG sprite / 外链 `<use>` 的页面、内层滚动容器页面）确认变体保留、解压正常、文件名干净。Chrome Web Store 版本可能滞后，以实际可升级版本为准；1.34.0 起若打开本地存档看不到 infobar，需在扩展详情页开启「允许访问文件网址」（Firefox 153+ 需允许访问本地文件）。
 5. `loadDeferredContentMinZoomFactor`（1.25.0 新增，选项页暂无控件）：加载延迟内容时的页面缩放下限，有效区间 (0, 1]；已于 2026-09-23 设为 `0.5`（见「三、发现与处置」2）。1.36.0 新增的 `loadDeferredContentKeepEmulatedScreenSize` 默认 `false`，按站点评估后再开（见「三、发现与处置」11）。
 6. **保存格式 = 自解压 ZIP (universal)**：`compressContent` / `selfExtractingArchive` / `extractDataFromPage` 均为 `true`。`compressContent` 是格式总开关，改它等于换格式（`false` = 纯自包含 HTML，资源内联为 `data:` URI）；要临时换格式用选项页顶部「格式」下拉（HTML / ZIP / 自解压 ZIP / 自解压 ZIP universal），它会按下拉重写这三个键，手工只改 `selfExtractingArchive` 不生效（见「三、发现与处置」1）。
 
@@ -222,7 +224,7 @@
 1.37.0 配置面（2026-11-14 补录，在 `v1.37.0` 源码与 core `1.12.0` 源码确证）：
 
 - `%switch<value|case1|result1|...|default>`：文件名模板函数，按值匹配返回对应结果；HFA 模板未使用，不可达。
-- `removeLinkQueryStrings` / `selectedElementsSelector`：core 1.12.0 / 1.11.0 新增选项，但扩展 v1.37.0 的 `DEFAULT_CONFIG` 未包含它们，HFA 不可达。若后续扩展暴露，`removeLinkQueryStrings` 会改写保存页里的链接（与「原样存档」冲突），默认应保持关闭；`selectedElementsSelector` 面向 CLI / 无选区调用，HFA 不用。
+- `removeLinkQueryStrings` / `selectedElementsSelector`：core 1.12.0 / 1.11.0 新增选项，但扩展 v1.38.0 的 `DEFAULT_CONFIG` 未包含它们，HFA 不可达。若后续扩展暴露，`removeLinkQueryStrings` 会改写保存页里的链接（与「原样存档」冲突），默认应保持关闭；`selectedElementsSelector` 面向 CLI / 无选区调用，HFA 不用。
 
 已由上游源码确证、不在此列的键：`maxAppendedDataLength`、`loadDeferredContentMinZoomFactor`、`readMaffMetadata`，以及 `compressContent` / `selfExtractingArchive` / `extractDataFromPage` / `preventAppendedData` / `disableCompression`（保存格式与归档路径语义）、`groupDuplicateImages` + `maxSizeDuplicateImages`（内联路径的去重门控与体积上限）。后续新增键再按同一流程补录。
 
@@ -237,9 +239,9 @@
 
 **1.24.0 升级核对（2026-09-04）**：与上版（137 键）逐键 diff，值变化 0、删除 0，rules 与顶层（`maxParallelWorkers` / `processInForeground`）一致，唯一差异为 GitHub 5 键随全量导出回潮 → 配置无需功能性调整。
 
-**1.29.0 迁移（2026-10-14 核对）**：`upgrade()` 新增 `delete profile.blockAlternativeImages`（无条件删除，无断言、无取值迁移）；core 侧 `DEPRECATED_OPTION_NAMES.blockAlternativeImages = "removeAlternativeImages"` 仅作兼容别名（旧键存在且新键未定义时才复制取值）。本配置状态已与目标一致（旧键删除、`removeAlternativeImages = false`），不触发迁移。1.30.0 ~ 1.37.0 无新增改名 / 删除迁移逻辑（1.32.0 / 1.34.0 / 1.36.0 的新键由 `DEFAULT_CONFIG` 回填；1.33.0 只改同步存储与导入清理；1.35.0 调整 `upgrade()` 等待时序；1.37.0 无配置面变化）。
+**1.29.0 迁移（2026-10-14 核对）**：`upgrade()` 新增 `delete profile.blockAlternativeImages`（无条件删除，无断言、无取值迁移）；core 侧 `DEPRECATED_OPTION_NAMES.blockAlternativeImages = "removeAlternativeImages"` 仅作兼容别名（旧键存在且新键未定义时才复制取值）。本配置状态已与目标一致（旧键删除、`removeAlternativeImages = false`），不触发迁移。1.30.0 ~ 1.38.0 无新增改名 / 删除迁移逻辑（1.32.0 / 1.34.0 / 1.36.0 的新键由 `DEFAULT_CONFIG` 回填；1.33.0 只改同步存储与导入清理；1.35.0 调整 `upgrade()` 等待时序；1.37.0 / 1.38.0 无配置面变化）。
 
-**1.34.0 ~ 1.37.0 迁移（2026-11-14 核对）**：`DEPRECATED_OPTION_NAMES` 无变化；`upgrade()` 未为新键加专门分支，按 `DEFAULT_CONFIG` 回填 —— 旧 149 键文件导入 1.34+ 会自动补 `embeddedScript = ""` 与 `loadDeferredContentKeepEmulatedScreenSize = false`（本文件手补只为维持全量导出）。注意 `acceptHeaders` 是对象值，旧 profile 中该对象已存在，`upgrade()` 的 `profile[key] === undefined` 判断不会替换它，所以 **image 头的 `image/jxl` 需要手工改**；1.35.0 在 `getRule()` / `getRules()` / `getProfileNames()` 等读取入口前等待 `pendingUpgradePromise`，修的是升级未完成时读到旧配置的启动竞态；1.37.0 无迁移逻辑。
+**1.34.0 ~ 1.38.0 迁移（2026-11-17 核对）**：`DEPRECATED_OPTION_NAMES` 无变化；`upgrade()` 未为新键加专门分支，按 `DEFAULT_CONFIG` 回填 —— 旧 149 键文件导入 1.34+ 会自动补 `embeddedScript = ""` 与 `loadDeferredContentKeepEmulatedScreenSize = false`（本文件手补只为维持全量导出）。注意 `acceptHeaders` 是对象值，旧 profile 中该对象已存在，`upgrade()` 的 `profile[key] === undefined` 判断不会替换它，所以 **image 头的 `image/jxl` 需要手工改**；1.35.0 在 `getRule()` / `getRules()` / `getProfileNames()` 等读取入口前等待 `pendingUpgradePromise`，修的是升级未完成时读到旧配置的启动竞态；1.37.0 无迁移逻辑；1.38.0 的 `config.js` 与 1.37.0 逐字节相同，无新增迁移逻辑。
 
 ## 附录 B：core 侧在 HFA 已启用路径上生效的行为变化（新增键另见「三」「五」）
 
@@ -279,5 +281,8 @@
 - **1.9.1**：（1）`groupDuplicateStylesheets` 也替换首次出现的重复内联样式表 —— 本配置 `false`，**不可达**；（2）`removeUnusedGlyphs` 保留 `X` / `x` 轮廓，修 macOS 非 Retina 屏上小字偏下偏淡 —— 本配置 `false`，**不可达**；（3）HTML 序列化器把处理指令写成 `<?target data?>`、CDATA 写成文本（此前输出 `undefined`）—— **可达**（页面含处理指令 / CDATA 时保真）；（4）按字符计数的文件名截断不再切在 BMP 外字符中间 —— 本配置按字节计数（`filenameMaxLengthUnit = "bytes"`），**不可达**。
 - **1.10.0**：（1）新增 `loadDeferredContentKeepEmulatedScreenSize`（见「三、发现与处置」11）—— 本配置 `false`，**不可达**；（2）CSS `url()` / `<img src>` 引用的 SVG sprite 片段单独切出保存（此前整张 sprite 存进去，显示为图标网格）—— **可达**；（3）保存帧的 `sandbox` 去掉 Safari 拒绝的 `allow-presentation` 与重复的 `allow-popups` —— **可达**（本配置 `removeFrames = false`）；（4）切出的 sprite 片段 `xmlns` 声明在 XMLNS 命名空间 —— **可达**。
 - **1.10.1**：保存选区时，选中内容之前的元素用 `visibility: hidden` + 空盒隐藏而不是 `display: none`，修 CSS Grid `auto` 行页面保存选区后只剩背景色 —— HFA 默认整页保存；仅在手动「保存选区」时**可达**。
-- **1.11.0**：新增 `selectedElementsSelector`（无选区时按 CSS 选择器保存）—— 扩展 v1.37.0 未把它放进 `DEFAULT_CONFIG`，**不可达**。
-- **1.12.0**：（1）新增 `removeLinkQueryStrings` —— 扩展 v1.37.0 未暴露，**不可达**；（2）新增 `%switch` 模板函数 —— HFA 模板未使用，**不可用**；（3）`loadDeferredContentKeepZoomLevel` 下虚拟列表按缩放后尺寸测量、保存高度错误的修复 —— 本配置 `false`，**不可达**；（4）注记（notes）运行时改由 core 构建、注记交互修复 —— HFA 不使用注记，**不可达**；（5）`removeAlternativeFonts` 的字体 `src` 解析缓存 —— 本配置 `false`，**不可达**。
+- **1.11.0**：新增 `selectedElementsSelector`（无选区时按 CSS 选择器保存）—— 扩展 v1.38.0 未把它放进 `DEFAULT_CONFIG`，**不可达**。
+- **1.12.0**：（1）新增 `removeLinkQueryStrings` —— 扩展 v1.38.0 未暴露，**不可达**；（2）新增 `%switch` 模板函数 —— HFA 模板未使用，**不可用**；（3）`loadDeferredContentKeepZoomLevel` 下虚拟列表按缩放后尺寸测量、保存高度错误的修复 —— 本配置 `false`，**不可达**；（4）注记（notes）运行时改由 core 构建、注记交互修复 —— HFA 不使用注记，**不可达**；（5）`removeAlternativeFonts` 的字体 `src` 解析缓存 —— 本配置 `false`，**不可达**。
+- **1.13.0**：（1）懒加载在「文档不高于视口、滚动的是内层元素」时也会进入 `triggerLazyLoading()`（`findScrollableElement()` 查找 `overflow` 为 `auto` / `scroll` / `overlay`、尺寸不小于视口 1/3、且内容溢出的子孙元素）—— 此前直接跳过，这类应用式布局只存首屏、首屏以下的图片全丢；本配置 `loadDeferredContent = true`，**可达**。（2）`<use href="icon.svg">` 引用的整份 SVG 现在内联进页面并改为 `#id` 引用（此前写成浏览器不渲染的 data URI，图片丢失）；被引用片段不是 `<symbol>` 时包进 `<defs>`（此前在自身位置重复绘制）—— 本配置 `blockImages = false`，**可达**。（3）`removeUnusedStyles` 开启时，选择器清洗遇到空参数 `:is()` / `:where()` 不再报 `Cannot read properties of null` —— 本配置 `removeUnusedStyles = false`，**不可达**。
+- **1.14.0**：`removeUnusedStyles` 开启时，shadow root 内的样式表也按组件裁剪未匹配规则（同标签宿主共享的样式表按组件分别裁剪）—— 本配置关闭该裁剪，**不可达**。
+- **1.14.1**：保存选区时，祖先 shadow root 中承载选中内容的 `<slot>` 不再被清空（此前保存结果为空白页）—— HFA 默认整页保存，仅在手动「保存选区」时**可达**。
